@@ -189,7 +189,7 @@ export default function Index() {
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              How <span className="gradient-text">Lovable-DSA</span> Works
+              How <span className="gradient-text">DSArena</span> Works
             </h2>
           </div>
           <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-3">
