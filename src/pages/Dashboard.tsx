@@ -10,13 +10,15 @@ import {
   Trophy,
   Target,
   Flame,
-  Clock,
   CheckCircle2,
   ArrowRight,
   Code2,
   Loader2,
+  Code,
+  BookOpen,
 } from 'lucide-react';
 import { problemsData } from '@/lib/problemsData';
+import { pythonProblemsData, PYTHON_TRACK_TOTAL, getPythonTrackIds } from '@/lib/pythonProblemsData';
 
 interface Profile {
   username: string | null;
@@ -28,20 +30,15 @@ interface Profile {
   streak_days: number;
 }
 
-interface RecentSubmission {
-  id: string;
-  status: string;
-  is_accepted: boolean;
-  created_at: string;
-  problems: { title: string; slug: string } | null;
+interface UserSolved {
+  problem_id: string;
 }
 
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
-  const [problemCounts, setProblemCounts] = useState({ easy: 0, medium: 0, hard: 0 });
+  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,32 +67,15 @@ export default function Dashboard() {
       setProfile(profileData);
     }
 
-    // Fetch recent submissions
-    const { data: submissionsData } = await supabase
-      .from('submissions')
-      .select(`
-        id,
-        status,
-        is_accepted,
-        created_at,
-        problems (title, slug)
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
+    // Fetch solved problems
+    const { data: solvedData } = await supabase
+      .from('user_solved')
+      .select('problem_id')
+      .eq('user_id', user.id);
 
-    if (submissionsData) {
-      setRecentSubmissions(submissionsData as RecentSubmission[]);
+    if (solvedData) {
+      setSolvedIds(new Set(solvedData.map((d: UserSolved) => d.problem_id)));
     }
-
-    // Calculate problem counts from local data
-    const counts = { easy: 0, medium: 0, hard: 0 };
-    problemsData.forEach((p) => {
-      if (p.difficulty in counts) {
-        counts[p.difficulty as keyof typeof counts]++;
-      }
-    });
-    setProblemCounts(counts);
 
     setLoading(false);
   };
@@ -112,8 +92,42 @@ export default function Dashboard() {
     return null;
   }
 
-  const totalProblems = problemCounts.easy + problemCounts.medium + problemCounts.hard;
-  const progressPercent = totalProblems > 0 ? (profile.total_solved / totalProblems) * 100 : 0;
+  // Calculate DSA stats (excluding Python Track)
+  const pythonTrackIds = new Set(getPythonTrackIds());
+  const dsaProblems = problemsData.filter(p => !pythonTrackIds.has(p.id));
+  const dsaSolvedCount = [...solvedIds].filter(id => 
+    dsaProblems.some(p => p.id === id)
+  ).length;
+  const dsaCounts = {
+    easy: dsaProblems.filter(p => p.difficulty === 'easy').length,
+    medium: dsaProblems.filter(p => p.difficulty === 'medium').length,
+    hard: dsaProblems.filter(p => p.difficulty === 'hard').length,
+    total: dsaProblems.length,
+  };
+  const dsaSolvedByDifficulty = {
+    easy: [...solvedIds].filter(id => dsaProblems.find(p => p.id === id && p.difficulty === 'easy')).length,
+    medium: [...solvedIds].filter(id => dsaProblems.find(p => p.id === id && p.difficulty === 'medium')).length,
+    hard: [...solvedIds].filter(id => dsaProblems.find(p => p.id === id && p.difficulty === 'hard')).length,
+  };
+
+  // Calculate Python Track stats
+  const pythonSolvedCount = pythonProblemsData.filter(p => solvedIds.has(p.id)).length;
+  const pythonCounts = {
+    easy: pythonProblemsData.filter(p => p.difficulty === 'easy').length,
+    medium: pythonProblemsData.filter(p => p.difficulty === 'medium').length,
+    hard: pythonProblemsData.filter(p => p.difficulty === 'hard').length,
+    total: PYTHON_TRACK_TOTAL,
+  };
+  const pythonSolvedByDifficulty = {
+    easy: pythonProblemsData.filter(p => p.difficulty === 'easy' && solvedIds.has(p.id)).length,
+    medium: pythonProblemsData.filter(p => p.difficulty === 'medium' && solvedIds.has(p.id)).length,
+    hard: pythonProblemsData.filter(p => p.difficulty === 'hard' && solvedIds.has(p.id)).length,
+  };
+
+  const totalSolved = dsaSolvedCount + pythonSolvedCount;
+  const totalProblems = dsaCounts.total + pythonCounts.total;
+  const dsaProgress = dsaCounts.total > 0 ? (dsaSolvedCount / dsaCounts.total) * 100 : 0;
+  const pythonProgress = pythonCounts.total > 0 ? (pythonSolvedCount / pythonCounts.total) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -130,7 +144,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Overall Stats Grid */}
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -140,7 +154,7 @@ export default function Dashboard() {
               <Trophy className="h-5 w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{profile.total_solved}</div>
+              <div className="text-3xl font-bold">{totalSolved}</div>
               <p className="mt-1 text-xs text-muted-foreground">
                 of {totalProblems} problems
               </p>
@@ -163,80 +177,39 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Submissions
+                DSA Progress
               </CardTitle>
               <Code2 className="h-5 w-5 text-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{recentSubmissions.length}</div>
-              <p className="mt-1 text-xs text-muted-foreground">recent attempts</p>
+              <div className="text-3xl font-bold">{dsaProgress.toFixed(0)}%</div>
+              <Progress value={dsaProgress} className="mt-2 h-2" />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Progress
+                Python Track
               </CardTitle>
               <Target className="h-5 w-5 text-success" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{progressPercent.toFixed(0)}%</div>
-              <Progress value={progressPercent} className="mt-2 h-2" />
+              <div className="text-3xl font-bold">{pythonProgress.toFixed(0)}%</div>
+              <Progress value={pythonProgress} className="mt-2 h-2" />
             </CardContent>
           </Card>
         </div>
 
+        {/* Two Column Progress */}
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Problems by Difficulty */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Problems by Difficulty</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-success">Easy</span>
-                  <span className="text-muted-foreground">
-                    {profile.easy_solved} / {problemCounts.easy}
-                  </span>
-                </div>
-                <Progress
-                  value={problemCounts.easy > 0 ? (profile.easy_solved / problemCounts.easy) * 100 : 0}
-                  className="h-2 bg-success/20"
-                />
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-warning">Medium</span>
-                  <span className="text-muted-foreground">
-                    {profile.medium_solved} / {problemCounts.medium}
-                  </span>
-                </div>
-                <Progress
-                  value={problemCounts.medium > 0 ? (profile.medium_solved / problemCounts.medium) * 100 : 0}
-                  className="h-2 bg-warning/20"
-                />
-              </div>
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="text-destructive">Hard</span>
-                  <span className="text-muted-foreground">
-                    {profile.hard_solved} / {problemCounts.hard}
-                  </span>
-                </div>
-                <Progress
-                  value={problemCounts.hard > 0 ? (profile.hard_solved / problemCounts.hard) * 100 : 0}
-                  className="h-2 bg-destructive/20"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Submissions */}
+          {/* DSA Problems Progress */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Recent Submissions</CardTitle>
+              <div className="flex items-center gap-2">
+                <Code2 className="h-5 w-5 text-primary" />
+                <CardTitle>DSA Problems</CardTitle>
+              </div>
               <Link to="/problems">
                 <Button variant="ghost" size="sm">
                   View all
@@ -244,42 +217,114 @@ export default function Dashboard() {
                 </Button>
               </Link>
             </CardHeader>
-            <CardContent>
-              {recentSubmissions.length === 0 ? (
-                <div className="py-8 text-center">
-                  <Code2 className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                  <p className="text-muted-foreground">No submissions yet</p>
-                  <Link to="/problems">
-                    <Button variant="link" className="mt-2">
-                      Start practicing
-                    </Button>
-                  </Link>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-2xl font-bold">{dsaSolvedCount}</span>
+                <span className="text-muted-foreground">/ {dsaCounts.total} solved</span>
+              </div>
+              
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-success">Easy</span>
+                  <span className="text-muted-foreground">
+                    {dsaSolvedByDifficulty.easy} / {dsaCounts.easy}
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentSubmissions.map((submission) => (
-                    <Link
-                      key={submission.id}
-                      to={`/problem/${submission.problems?.slug}`}
-                      className="flex items-center justify-between rounded-lg border border-border bg-card p-3 transition-colors hover:bg-secondary/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        {submission.is_accepted ? (
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                        ) : (
-                          <Clock className="h-5 w-5 text-warning" />
-                        )}
-                        <span className="font-medium">
-                          {submission.problems?.title || 'Unknown Problem'}
-                        </span>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(submission.created_at).toLocaleDateString()}
-                      </span>
-                    </Link>
-                  ))}
+                <Progress
+                  value={dsaCounts.easy > 0 ? (dsaSolvedByDifficulty.easy / dsaCounts.easy) * 100 : 0}
+                  className="h-2 bg-success/20"
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-warning">Medium</span>
+                  <span className="text-muted-foreground">
+                    {dsaSolvedByDifficulty.medium} / {dsaCounts.medium}
+                  </span>
+                </div>
+                <Progress
+                  value={dsaCounts.medium > 0 ? (dsaSolvedByDifficulty.medium / dsaCounts.medium) * 100 : 0}
+                  className="h-2 bg-warning/20"
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-destructive">Hard</span>
+                  <span className="text-muted-foreground">
+                    {dsaSolvedByDifficulty.hard} / {dsaCounts.hard}
+                  </span>
+                </div>
+                <Progress
+                  value={dsaCounts.hard > 0 ? (dsaSolvedByDifficulty.hard / dsaCounts.hard) * 100 : 0}
+                  className="h-2 bg-destructive/20"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Python Track Progress */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5 text-primary" />
+                <CardTitle>Python Learning Track</CardTitle>
+              </div>
+              <Link to="/python-track">
+                <Button variant="ghost" size="sm">
+                  View all
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-2xl font-bold">{pythonSolvedCount}</span>
+                <span className="text-muted-foreground">/ {pythonCounts.total} solved</span>
+              </div>
+
+              {pythonSolvedCount === PYTHON_TRACK_TOTAL && (
+                <div className="rounded-lg bg-success/10 border border-success/30 p-3 text-center mb-4">
+                  <CheckCircle2 className="h-6 w-6 text-success mx-auto mb-1" />
+                  <p className="text-success font-medium text-sm">Track Completed! 🎉</p>
                 </div>
               )}
+              
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-success">🟢 Beginner</span>
+                  <span className="text-muted-foreground">
+                    {pythonSolvedByDifficulty.easy} / {pythonCounts.easy}
+                  </span>
+                </div>
+                <Progress
+                  value={pythonCounts.easy > 0 ? (pythonSolvedByDifficulty.easy / pythonCounts.easy) * 100 : 0}
+                  className="h-2 bg-success/20"
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-warning">🟡 Intermediate</span>
+                  <span className="text-muted-foreground">
+                    {pythonSolvedByDifficulty.medium} / {pythonCounts.medium}
+                  </span>
+                </div>
+                <Progress
+                  value={pythonCounts.medium > 0 ? (pythonSolvedByDifficulty.medium / pythonCounts.medium) * 100 : 0}
+                  className="h-2 bg-warning/20"
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="text-destructive">🔴 Advanced</span>
+                  <span className="text-muted-foreground">
+                    {pythonSolvedByDifficulty.hard} / {pythonCounts.hard}
+                  </span>
+                </div>
+                <Progress
+                  value={pythonCounts.hard > 0 ? (pythonSolvedByDifficulty.hard / pythonCounts.hard) * 100 : 0}
+                  className="h-2 bg-destructive/20"
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -293,12 +338,20 @@ export default function Dashboard() {
                 Keep your streak going with a new problem today.
               </p>
             </div>
-            <Link to="/problems">
-              <Button variant="hero" size="lg">
-                Start Practicing
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
+            <div className="flex gap-3">
+              <Link to="/problems">
+                <Button variant="outline" size="lg">
+                  <BookOpen className="mr-2 h-5 w-5" />
+                  DSA Problems
+                </Button>
+              </Link>
+              <Link to="/python-track">
+                <Button variant="hero" size="lg">
+                  <Code className="mr-2 h-5 w-5" />
+                  Python Track
+                </Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </main>
