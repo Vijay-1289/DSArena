@@ -10,6 +10,7 @@ import Problems from "./pages/Problems";
 import ProblemDetail from "./pages/ProblemDetail";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import PythonTrack from "./pages/PythonTrack";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/problems" element={<Problems />} />
+            <Route path="/python-track" element={<PythonTrack />} />
             <Route path="/problem/:slug" element={<ProblemDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
