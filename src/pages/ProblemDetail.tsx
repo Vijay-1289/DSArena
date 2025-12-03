@@ -11,11 +11,11 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
-import { problemsData } from '@/lib/problemsData';
+import { problemsData, allProblemsData } from '@/lib/problemsData';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Play, Send, Save, Loader2, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { Play, Send, Save, Loader2, ChevronLeft, ChevronRight, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
@@ -47,18 +47,40 @@ export default function ProblemDetail() {
   const [consoleOutput, setConsoleOutput] = useState('');
   const [showDescription, setShowDescription] = useState(true);
   const [solved, setSolved] = useState(false);
+  const [alreadySolved, setAlreadySolved] = useState(false);
 
-  // Find problem from local data
-  const problem = problemsData.find(p => p.slug === slug);
-  const problemIndex = problemsData.findIndex(p => p.slug === slug);
+  // Find problem from local data (includes Python track)
+  const problem = allProblemsData.find(p => p.slug === slug);
+  const problemIndex = allProblemsData.findIndex(p => p.slug === slug);
   
-  // Get next problem
+  // Get next problem in same category
   const nextProblem = useMemo(() => {
-    if (problemIndex >= 0 && problemIndex < problemsData.length - 1) {
-      return problemsData[problemIndex + 1];
+    if (!problem) return null;
+    const sameCategoryProblems = allProblemsData.filter(p => p.category === problem.category);
+    const currentIdx = sameCategoryProblems.findIndex(p => p.slug === slug);
+    if (currentIdx >= 0 && currentIdx < sameCategoryProblems.length - 1) {
+      return sameCategoryProblems[currentIdx + 1];
     }
     return null;
-  }, [problemIndex]);
+  }, [problem, slug]);
+
+  // Check if already solved
+  useEffect(() => {
+    const checkIfSolved = async () => {
+      if (!user || !problem) return;
+      const { data } = await supabase
+        .from('user_solved')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('problem_id', problem.id)
+        .maybeSingle();
+      if (data) {
+        setAlreadySolved(true);
+        setSolved(true);
+      }
+    };
+    checkIfSolved();
+  }, [user, problem]);
 
   // Convert visible test cases to the format expected by TestCasePanel
   const testCases: TestCase[] = problem?.visibleTestCases.map((tc, index) => ({
@@ -289,6 +311,21 @@ export default function ProblemDetail() {
   return (
     <div className="flex h-screen flex-col bg-background">
       <Navbar />
+
+      {/* Already Solved Banner */}
+      {alreadySolved && (
+        <div className="bg-success/10 border-b border-success/30 px-4 py-3 text-center">
+          <p className="text-success font-medium flex items-center justify-center gap-2">
+            <CheckCircle2 className="h-5 w-5" />
+            You have already completed this problem! ✓
+            {nextProblem && (
+              <Button variant="link" onClick={goToNextProblem} className="text-success underline p-0 h-auto">
+                Try the next one →
+              </Button>
+            )}
+          </p>
+        </div>
+      )}
 
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal">

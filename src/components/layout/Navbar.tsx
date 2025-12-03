@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
-import { Code2, LayoutDashboard, LogOut, Settings, User } from 'lucide-react';
+import { Code2, LayoutDashboard, LogOut, Settings, User, Code } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +38,12 @@ export function Navbar() {
               <Link to="/problems">
                 <Button variant="ghost" size="sm">
                   Problems
+                </Button>
+              </Link>
+              <Link to="/python-track">
+                <Button variant="ghost" size="sm">
+                  <Code className="mr-2 h-4 w-4" />
+                  Python Track
                 </Button>
               </Link>
               <Link to="/dashboard">

@@ -1,4 +1,5 @@
 // Complete problems dataset with descriptions, test cases, and metadata
+import { pythonProblemsData } from './pythonProblemsData';
 
 export interface ProblemData {
   id: string;
@@ -1194,5 +1195,9 @@ export const topicsData = [
   { name: "2D Dynamic Programming", slug: "dp-2d", icon: "Grid3X3", displayOrder: 15 },
   { name: "Greedy", slug: "greedy", icon: "Zap", displayOrder: 16 },
   { name: "Intervals", slug: "intervals", icon: "Calendar", displayOrder: 17 },
-  { name: "Bit Manipulation", slug: "bit-manipulation", icon: "Binary", displayOrder: 18 }
+  { name: "Bit Manipulation", slug: "bit-manipulation", icon: "Binary", displayOrder: 18 },
+  { name: "Python Track", slug: "python-track", icon: "Code", displayOrder: 19 }
 ];
+
+// Combined problems data including Python track
+export const allProblemsData: ProblemData[] = [...problemsData, ...pythonProblemsData];
