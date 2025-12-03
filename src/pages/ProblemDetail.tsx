@@ -478,7 +478,26 @@ export default function ProblemDetail() {
                   </div>
 
                   {/* Editor Content */}
-                  <div className="flex-1">
+                  <div className="flex-1 relative">
+                    {alreadySolved && (
+                      <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+                        <div className="text-center">
+                          <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-3" />
+                          <p className="text-lg font-semibold text-success">Problem Completed!</p>
+                          <p className="text-sm text-muted-foreground mt-1">You've already solved this problem</p>
+                          {nextProblem && (
+                            <Button
+                              onClick={goToNextProblem}
+                              className="mt-4"
+                              variant="outline"
+                            >
+                              Try Next Problem
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <CodeEditor
                       value={code}
                       onChange={setCode}
@@ -489,44 +508,59 @@ export default function ProblemDetail() {
                   {/* Editor Footer */}
                   <div className="flex items-center justify-between border-t border-border px-4 py-3">
                     <span className="text-xs text-muted-foreground">
-                      Paste disabled — type your solution
+                      {alreadySolved ? "This problem is already completed" : "Paste disabled — type your solution"}
                     </span>
                     <div className="flex gap-2">
-                      {solved && nextProblem && (
-                        <Button
-                          variant="outline"
-                          onClick={goToNextProblem}
-                          className="border-success text-success hover:bg-success/10"
-                        >
-                          Next Problem
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
+                      {alreadySolved ? (
+                        nextProblem && (
+                          <Button
+                            variant="outline"
+                            onClick={goToNextProblem}
+                            className="border-success text-success hover:bg-success/10"
+                          >
+                            Next Problem
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        )
+                      ) : (
+                        <>
+                          {solved && nextProblem && (
+                            <Button
+                              variant="outline"
+                              onClick={goToNextProblem}
+                              className="border-success text-success hover:bg-success/10"
+                            >
+                              Next Problem
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            onClick={() => runCode(false)}
+                            disabled={running || submitting}
+                          >
+                            {running ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Play className="mr-2 h-4 w-4" />
+                            )}
+                            Run
+                          </Button>
+                          <Button
+                            variant="default"
+                            onClick={() => runCode(true)}
+                            disabled={running || submitting}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            {submitting ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="mr-2 h-4 w-4" />
+                            )}
+                            Submit
+                          </Button>
+                        </>
                       )}
-                      <Button
-                        variant="outline"
-                        onClick={() => runCode(false)}
-                        disabled={running || submitting}
-                      >
-                        {running ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Play className="mr-2 h-4 w-4" />
-                        )}
-                        Run
-                      </Button>
-                      <Button
-                        variant="default"
-                        onClick={() => runCode(true)}
-                        disabled={running || submitting}
-                        className="bg-primary hover:bg-primary/90"
-                      >
-                        {submitting ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Send className="mr-2 h-4 w-4" />
-                        )}
-                        Submit
-                      </Button>
                     </div>
                   </div>
                 </div>

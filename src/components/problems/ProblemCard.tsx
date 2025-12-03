@@ -32,10 +32,23 @@ export function ProblemCard({
 
   const config = difficultyConfig[difficulty];
 
+  // Block navigation for solved problems
+  const handleClick = (e: React.MouseEvent) => {
+    if (isSolved) {
+      e.preventDefault();
+    }
+  };
+
   return (
     <Link
-      to={`/problem/${slug}`}
-      className="group block rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/50 hover:bg-card/80 hover:shadow-lg"
+      to={isSolved ? '#' : `/problem/${slug}`}
+      onClick={handleClick}
+      className={cn(
+        "group block rounded-xl border p-4 transition-all duration-200",
+        isSolved 
+          ? "border-success/30 bg-success/5 cursor-default" 
+          : "border-border bg-card hover:border-primary/50 hover:bg-card/80 hover:shadow-lg"
+      )}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -49,9 +62,19 @@ export function ProblemCard({
             )}
           </div>
           <div>
-            <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-              {title}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className={cn(
+                "font-semibold transition-colors",
+                isSolved ? "text-success" : "text-foreground group-hover:text-primary"
+              )}>
+                {title}
+              </h3>
+              {isSolved && (
+                <Badge className="bg-success/20 text-success border-success/30 text-xs">
+                  Completed ✓
+                </Badge>
+              )}
+            </div>
             {topic && (
               <p className="mt-1 text-sm text-muted-foreground">{topic}</p>
             )}
