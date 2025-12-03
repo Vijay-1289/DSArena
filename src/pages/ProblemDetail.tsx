@@ -11,26 +11,11 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
-import { supabase } from '@/integrations/supabase/client';
+import { problemsData } from '@/lib/problemsData';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { Play, Send, Save, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface Problem {
-  id: string;
-  title: string;
-  slug: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  description: string;
-  input_format: string | null;
-  output_format: string | null;
-  constraints: string | null;
-  time_limit_ms: number;
-  memory_limit_mb: number;
-  starter_code: string | null;
-  topics: { name: string } | null;
-}
 
 interface TestCase {
   id: string;
@@ -52,8 +37,6 @@ export default function ProblemDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [problem, setProblem] = useState<Problem | null>(null);
-  const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
@@ -62,96 +45,47 @@ export default function ProblemDetail() {
   const [consoleOutput, setConsoleOutput] = useState('');
   const [showDescription, setShowDescription] = useState(true);
 
-  useEffect(() => {
-    if (slug) {
-      fetchProblem();
-    }
-  }, [slug]);
+  // Find problem from local data
+  const problem = problemsData.find(p => p.slug === slug);
+
+  // Convert visible test cases to the format expected by TestCasePanel
+  const testCases: TestCase[] = problem?.visibleTestCases.map((tc, index) => ({
+    id: `tc-${index}`,
+    input: tc.input,
+    expected_output: tc.expectedOutput,
+    is_visible: true,
+    display_order: index,
+  })) || [];
 
   useEffect(() => {
-    if (problem && user) {
-      loadDraft();
-    }
-  }, [problem, user]);
-
-  const fetchProblem = async () => {
-    const { data: problemData, error: problemError } = await supabase
-      .from('problems')
-      .select(`
-        id,
-        title,
-        slug,
-        difficulty,
-        description,
-        input_format,
-        output_format,
-        constraints,
-        time_limit_ms,
-        memory_limit_mb,
-        starter_code,
-        topics (name)
-      `)
-      .eq('slug', slug)
-      .eq('is_published', true)
-      .single();
-
-    if (problemError || !problemData) {
+    if (!problem) {
       toast.error('Problem not found');
       navigate('/problems');
       return;
     }
-
-    setProblem(problemData as Problem);
-    setCode(problemData.starter_code || 'def solution():\n    pass');
-
-    const { data: testData } = await supabase
-      .from('test_cases')
-      .select('id, input, expected_output, is_visible, display_order')
-      .eq('problem_id', problemData.id)
-      .eq('is_visible', true)
-      .order('display_order');
-
-    if (testData) {
-      setTestCases(testData);
-    }
-
+    setCode(problem.starterCode);
     setLoading(false);
-  };
+  }, [slug, problem, navigate]);
 
-  const loadDraft = async () => {
-    if (!user || !problem) return;
-
-    const { data } = await supabase
-      .from('drafts')
-      .select('code')
-      .eq('user_id', user.id)
-      .eq('problem_id', problem.id)
-      .single();
-
-    if (data?.code) {
-      setCode(data.code);
+  // Load draft from localStorage
+  useEffect(() => {
+    if (problem && user) {
+      const draftKey = `draft-${user.id}-${problem.id}`;
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        setCode(savedDraft);
+      }
     }
-  };
+  }, [problem, user]);
 
-  const saveDraft = useCallback(async () => {
+  const saveDraft = useCallback(() => {
     if (!user || !problem) {
       toast.error('Please sign in to save your draft');
       return;
     }
-
-    const { error } = await supabase
-      .from('drafts')
-      .upsert({
-        user_id: user.id,
-        problem_id: problem.id,
-        code,
-      });
-
-    if (error) {
-      toast.error('Failed to save draft');
-    } else {
-      toast.success('Draft saved');
-    }
+    const draftKey = `draft-${user.id}-${problem.id}`;
+    localStorage.setItem(draftKey, code);
+    toast.success('Draft saved');
   }, [user, problem, code]);
 
   const runCode = async (submitAll = false) => {
@@ -170,32 +104,29 @@ export default function ProblemDetail() {
     setResults(null);
     setConsoleOutput('');
 
+    // Simulate code execution locally for now
+    // In a real implementation, this would call an edge function
     try {
-      const response = await supabase.functions.invoke('run-code', {
-        body: {
-          code,
-          problemId: problem.id,
-          submitAll,
-        },
-      });
+      // For demo purposes, show test cases as "pending"
+      const testCasesToRun = submitAll 
+        ? [...problem.visibleTestCases, ...problem.hiddenTestCases]
+        : problem.visibleTestCases;
 
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
+      // Simulate execution delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      const data = response.data;
-      setResults(data.results);
-      setConsoleOutput(data.console || '');
+      // Mock results - in production this would be actual code execution
+      const mockResults: TestResult[] = testCasesToRun.map((tc, index) => ({
+        passed: false,
+        actual_output: 'Code execution not yet implemented',
+        runtime_ms: Math.floor(Math.random() * 100) + 10,
+      }));
+
+      setResults(mockResults);
+      setConsoleOutput('Note: Code execution backend not yet configured. This is a preview of the interface.');
 
       if (submitAll) {
-        const passed = data.results.filter((r: TestResult) => r.passed).length;
-        const total = data.results.length;
-
-        if (passed === total) {
-          toast.success('All tests passed! Solution accepted!');
-        } else {
-          toast.error(`${passed}/${total} tests passed`);
-        }
+        toast.info('Code execution backend not yet configured');
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to run code');
@@ -249,9 +180,7 @@ export default function ProblemDetail() {
                       <Badge variant="outline" className={cn('border', config.className)}>
                         {config.label}
                       </Badge>
-                      {problem.topics && (
-                        <Badge variant="secondary">{problem.topics.name}</Badge>
-                      )}
+                      <Badge variant="secondary">{problem.category}</Badge>
                     </div>
                   </div>
                 </div>
@@ -269,21 +198,21 @@ export default function ProblemDetail() {
                   </div>
 
                   {/* Input Format */}
-                  {problem.input_format && (
+                  {problem.inputFormat && (
                     <div>
                       <h3 className="mb-2 font-semibold">Input Format</h3>
-                      <pre className="rounded-lg bg-muted p-3 text-sm">
-                        {problem.input_format}
+                      <pre className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
+                        {problem.inputFormat}
                       </pre>
                     </div>
                   )}
 
                   {/* Output Format */}
-                  {problem.output_format && (
+                  {problem.outputFormat && (
                     <div>
                       <h3 className="mb-2 font-semibold">Output Format</h3>
-                      <pre className="rounded-lg bg-muted p-3 text-sm">
-                        {problem.output_format}
+                      <pre className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
+                        {problem.outputFormat}
                       </pre>
                     </div>
                   )}
@@ -292,7 +221,7 @@ export default function ProblemDetail() {
                   {problem.constraints && (
                     <div>
                       <h3 className="mb-2 font-semibold">Constraints</h3>
-                      <pre className="rounded-lg bg-muted p-3 text-sm">
+                      <pre className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
                         {problem.constraints}
                       </pre>
                     </div>
@@ -300,8 +229,8 @@ export default function ProblemDetail() {
 
                   {/* Limits */}
                   <div className="flex gap-4 text-sm text-muted-foreground">
-                    <span>Time Limit: {problem.time_limit_ms}ms</span>
-                    <span>Memory Limit: {problem.memory_limit_mb}MB</span>
+                    <span>Time Limit: {problem.timeLimitMs}ms</span>
+                    <span>Memory Limit: {problem.memoryLimitMb}MB</span>
                   </div>
 
                   {/* Examples */}
@@ -407,9 +336,10 @@ export default function ProblemDetail() {
                         Run
                       </Button>
                       <Button
-                        variant="hero"
+                        variant="default"
                         onClick={() => runCode(true)}
                         disabled={running || submitting}
+                        className="bg-primary hover:bg-primary/90"
                       >
                         {submitting ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
