@@ -17,16 +17,16 @@
    ### 🧵 Multi-Language Coding Tracks  
   Track list includes:
     
-   - Python  
-    - JavaScript  
-    - Java  
-    - C++  
-    - Go  
-    - Rust  
-    - C#  
-    - Ruby  
-    - Swift  
-    - Kotlin  
+ - Python  
+ - JavaScript  
+ - Java  
+ - C++  
+ - Go  
+ - Rust  
+ - C#  
+ - Ruby  
+ - Swift  
+ - Kotlin  
 
   All tracks come in:
    - 🔹 Beginner (10 problems)  
