@@ -1,41 +1,56 @@
- <h1 align="center">⚡ Python Track – Coding Challenge Solutions ⚡</h1>
+   <h1 align="center">🔥 DSArena – The Ultimate LeetCode-Style Coding Platform 🔥</h1>
 
    <p align="center">
-      <img src="https://img.shields.io/badge/Python-3.x-blue?style=for-the-badge">
+      <img src="https://img.shields.io/badge/Platform-DSArena-darkviolet?style=for-the-badge">
       <img src="https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge">
-      <img src="https://img.shields.io/badge/Code%20Style-Clean%20%26%20Readable-9cf?style=for-the-badge">
-      <img src="https://img.shields.io/badge/PRs-Welcome-orange?style=for-the-badge">
+      <img src="https://img.shields.io/badge/Languages-10%2B-blue?style=for-the-badge">
+      <img src="https://img.shields.io/badge/Tracks-Beginner%20|%20Intermediate%20|%20Advanced-orange?style=for-the-badge">
+      <img src="https://img.shields.io/badge/PRs-Welcome-9cf?style=for-the-badge">
     </p>
 
-   ## 🖤 Overview
-   This repository is a neatly organized collection of Python solutions to classic programming and interview-prep problems.  
-    Every script in this project is:
-    - Function-based  
-    - Easy to read  
-    - Input/Output formatted  
-    - Beginner & interview-friendly  
+   ## 🖤 What is DSArena?
+   DSArena is your go-to dark-themed coding battleground where you sharpen your DSA skills, climb ranks, earn badges, and prepare for technical interviews — all inside a smooth, modern UI.
 
-   ## 📁 Project Structure
-   python_track_solutions/
-   ├── largest_of_three.py
-   ├── prime_check.py
-   ├── fibonacci.py
-   ├── reverse_string.py
-   ├── sum_of_digits.py
-   └── more coming soon...
+   Think:
+    **LeetCode + Codeforces + HackerRank → polished into one sleek platform.**
+   ## ⚙️ Platform Features
+   ### 🧵 Multi-Language Coding Tracks  
+  Track list includes:
+    - Python  
+    - JavaScript  
+    - Java  
+    - C++  
+    - Go  
+    - Rust  
+    - C#  
+    - Ruby  
+    - Swift  
+    - Kotlin  
 
-   ## 🧩 Features
-   - Intuitive problem-wise separation  
-   - Clean and consistent code formatting  
-   - Carefully chosen algorithms  
-   - Perfect for beginners & interview candidates  
+  All tracks come in:
+   - 🔹 Beginner (10 problems)  
+   - 🔸 Intermediate (10 problems)  
+   - 🔺 Advanced (10 problems)
 
-   ## 🛠️ Tech Stack
-   - Python 3.x  
-   - Standard libraries only  
+  ### 💡 Smart Judge System
+   - Auto-compiles & auto-runs your code  
+   - Shows pass/fail test cases  
+   - Displays execution time & memory  
+   - Prevents re-attempting fully passed problems  
+  ### 📊 User Dashboard
+   - Language-wise progress  
+   - Completed problems  
+   - Achievements  
+   - Streak calendar  
+   - XP & leveling system  
+  ### 🏅 Achievements & Certifications
+   Finish a track → earn a **certificate**  
+   Maintain streaks → earn **badges**  
+   Complete full language set → unlock **Mastery Rank**
 
-   ## 🤝 Contribute
-   PRs are open and appreciated.  
+ 
+  ## 🤝 Contribute
+  Love building dev tools? Come contribute and make DSArena bigger, faster, and cooler.
 
-   ## 🌌 Author
-   Made with ❤️ and clean Python.
+   ---
+   <p align="center">Made with ❤️ for learners, by developers.</p>
