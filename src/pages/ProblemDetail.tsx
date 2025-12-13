@@ -92,12 +92,175 @@ export default function ProblemDetail() {
   // Final editor language: user selection for DSA, fixed for tracks
   const editorLanguage = isDSAProblem && selectedLanguage ? selectedLanguage : defaultLanguage;
 
+  // Language-specific starter code templates
+  const getStarterCodeForLanguage = useCallback((lang: string): string => {
+    const templates: Record<string, string> = {
+      python: `# Write your solution here
+def solution():
+    # Your code here
+    pass
+
+# Read input
+# n = int(input())
+# Print output
+# print(result)
+`,
+      javascript: `// Write your solution here
+function solution() {
+    // Your code here
+}
+
+// Read input from stdin
+const readline = require('readline');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+let lines = [];
+rl.on('line', (line) => {
+    lines.push(line);
+});
+
+rl.on('close', () => {
+    // Parse input and call solution
+    console.log(solution());
+});
+`,
+      java: `import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        // Read input
+        // int n = scanner.nextInt();
+        
+        // Your solution here
+        
+        // Print output
+        // System.out.println(result);
+    }
+}
+`,
+      cpp: `#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+int main() {
+    // Read input
+    // int n;
+    // cin >> n;
+    
+    // Your solution here
+    
+    // Print output
+    // cout << result << endl;
+    
+    return 0;
+}
+`,
+      go: `package main
+
+import (
+    "fmt"
+)
+
+func main() {
+    // Read input
+    // var n int
+    // fmt.Scan(&n)
+    
+    // Your solution here
+    
+    // Print output
+    // fmt.Println(result)
+}
+`,
+      rust: `use std::io::{self, BufRead};
+
+fn main() {
+    let stdin = io::stdin();
+    let mut lines = stdin.lock().lines();
+    
+    // Read input
+    // let n: i32 = lines.next().unwrap().unwrap().parse().unwrap();
+    
+    // Your solution here
+    
+    // Print output
+    // println!("{}", result);
+}
+`,
+      csharp: `using System;
+
+class Program {
+    static void Main() {
+        // Read input
+        // int n = int.Parse(Console.ReadLine());
+        
+        // Your solution here
+        
+        // Print output
+        // Console.WriteLine(result);
+    }
+}
+`,
+      ruby: `# Write your solution here
+
+# Read input
+# n = gets.to_i
+
+# Your solution here
+
+# Print output
+# puts result
+`,
+      swift: `import Foundation
+
+// Read input
+// let n = Int(readLine()!)!
+
+// Your solution here
+
+// Print output
+// print(result)
+`,
+      kotlin: `fun main() {
+    // Read input
+    // val n = readLine()!!.toInt()
+    
+    // Your solution here
+    
+    // Print output
+    // println(result)
+}
+`,
+    };
+    return templates[lang] || templates.python;
+  }, []);
+
   // Initialize selected language when problem loads (for DSA problems)
   useEffect(() => {
     if (isDSAProblem && !selectedLanguage) {
       setSelectedLanguage(defaultLanguage);
     }
   }, [isDSAProblem, defaultLanguage, selectedLanguage]);
+
+  // Update code when language changes for DSA problems
+  useEffect(() => {
+    if (isDSAProblem && selectedLanguage) {
+      // Check if there's a saved draft for this language
+      const draftKey = `draft-${user?.id}-${problem?.id}-${selectedLanguage}`;
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        setCode(savedDraft);
+      } else {
+        // Use language-specific starter code
+        setCode(getStarterCodeForLanguage(selectedLanguage));
+      }
+    }
+  }, [selectedLanguage, isDSAProblem, user?.id, problem?.id, getStarterCodeForLanguage]);
   
   // Get next problem in same category
   const nextProblem = useMemo(() => {
@@ -270,10 +433,13 @@ export default function ProblemDetail() {
       toast.error('Please sign in to save your draft');
       return;
     }
-    const draftKey = `draft-${user.id}-${problem.id}`;
+    // Save draft with language suffix for DSA problems
+    const draftKey = isDSAProblem 
+      ? `draft-${user.id}-${problem.id}-${editorLanguage}`
+      : `draft-${user.id}-${problem.id}`;
     localStorage.setItem(draftKey, code);
     toast.success('Draft saved');
-  }, [user, problem, code]);
+  }, [user, problem, code, isDSAProblem, editorLanguage]);
 
   const runCode = async (submitAll = false) => {
     if (!problem) return;
