@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-import glitchyCat from '@/assets/glitchy-cat.png';
 
 interface GlitchyAssistantProps {
   code: string;
@@ -48,7 +47,7 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
       const { data, error } = await supabase.functions.invoke('glitchy-hint', {
         body: {
           code,
-          problem: problemDescription.slice(0, 500), // Limit for token efficiency
+          problem: problemDescription.slice(0, 500),
           language,
           error: hasError ? lastError : null,
         },
@@ -74,7 +73,6 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
     } else if (!hint) {
       fetchHint(false);
     } else {
-      // Toggle visibility
       setIsVisible(false);
       setTimeout(() => {
         setHint(null);
@@ -106,55 +104,126 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
   };
 
   return (
-    <div className="absolute -top-2 right-4 z-50">
-      {/* Glitchy Cat Container */}
+    <div className="absolute top-0 right-16 z-50">
+      {/* Glitchy Cat - Peeking from top like Snapchat avatar */}
       <div 
         className={cn(
           "relative cursor-pointer transition-all duration-300 ease-out",
-          isVisible ? "translate-y-0" : "translate-y-8",
           getMoodAnimation()
         )}
         onClick={handleGlitchyClick}
       >
-        {/* Cat Image - Peeping from top */}
-        <div className="relative">
-          <img 
-            src={glitchyCat} 
-            alt="Glitchy the coding cat" 
-            className={cn(
-              "w-16 h-16 object-contain drop-shadow-lg transition-transform duration-200",
-              "hover:scale-110",
-              mood === 'alert' && "filter hue-rotate-15"
+        {/* Cat Avatar Container - Peeking effect */}
+        <div 
+          className={cn(
+            "relative w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 border-2 border-primary/50 shadow-lg overflow-hidden transition-all duration-300",
+            "hover:scale-110 hover:border-primary",
+            isVisible ? "translate-y-0" : "-translate-y-2",
+            mood === 'alert' && "border-destructive animate-pulse"
+          )}
+        >
+          {/* Cat Face SVG */}
+          <svg 
+            viewBox="0 0 100 100" 
+            className="w-full h-full"
+          >
+            {/* Cat head */}
+            <ellipse cx="50" cy="55" rx="35" ry="30" fill="hsl(var(--muted))" />
+            
+            {/* Left ear */}
+            <polygon points="20,35 30,15 40,35" fill="hsl(var(--muted))" />
+            <polygon points="23,33 30,20 37,33" fill="hsl(var(--primary)/0.3)" />
+            
+            {/* Right ear */}
+            <polygon points="60,35 70,15 80,35" fill="hsl(var(--muted))" />
+            <polygon points="63,33 70,20 77,33" fill="hsl(var(--primary)/0.3)" />
+            
+            {/* Eyes */}
+            <ellipse 
+              cx="35" 
+              cy="50" 
+              rx={mood === 'alert' ? '8' : '6'} 
+              ry={mood === 'sleepy' || mood === 'tired' ? '2' : '8'} 
+              fill="hsl(var(--primary))" 
+            />
+            <ellipse 
+              cx="65" 
+              cy="50" 
+              rx={mood === 'alert' ? '8' : '6'} 
+              ry={mood === 'sleepy' || mood === 'tired' ? '2' : '8'} 
+              fill="hsl(var(--primary))" 
+            />
+            
+            {/* Pupils */}
+            {mood !== 'sleepy' && mood !== 'tired' && (
+              <>
+                <circle cx="35" cy="50" r="3" fill="hsl(var(--background))" />
+                <circle cx="65" cy="50" r="3" fill="hsl(var(--background))" />
+              </>
             )}
-          />
-          
-          {/* Mood Indicator */}
-          <span className="absolute -bottom-1 -right-1 text-lg">
-            {getMoodEmoji()}
-          </span>
+            
+            {/* Nose */}
+            <polygon points="50,58 46,64 54,64" fill="hsl(var(--primary))" />
+            
+            {/* Mouth */}
+            <path 
+              d={mood === 'happy' || mood === 'impressed' 
+                ? "M 42 68 Q 50 76 58 68" 
+                : mood === 'alert' 
+                  ? "M 42 70 Q 50 65 58 70" 
+                  : "M 42 68 Q 50 72 58 68"
+              } 
+              stroke="hsl(var(--foreground))" 
+              strokeWidth="2" 
+              fill="none" 
+            />
+            
+            {/* Whiskers */}
+            <line x1="10" y1="55" x2="30" y2="58" stroke="hsl(var(--foreground)/0.5)" strokeWidth="1" />
+            <line x1="10" y1="62" x2="30" y2="62" stroke="hsl(var(--foreground)/0.5)" strokeWidth="1" />
+            <line x1="70" y1="58" x2="90" y2="55" stroke="hsl(var(--foreground)/0.5)" strokeWidth="1" />
+            <line x1="70" y1="62" x2="90" y2="62" stroke="hsl(var(--foreground)/0.5)" strokeWidth="1" />
+          </svg>
           
           {/* Loading Spinner */}
           {isLoading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 rounded-full">
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           )}
         </div>
+        
+        {/* Mood Indicator Bubble */}
+        <span className={cn(
+          "absolute -bottom-1 -left-1 text-sm bg-card rounded-full w-5 h-5 flex items-center justify-center border border-border shadow-sm",
+          mood === 'alert' && "animate-bounce"
+        )}>
+          {getMoodEmoji()}
+        </span>
+        
+        {/* Thinking dots when curious or thinking */}
+        {(mood === 'thinking' || mood === 'curious') && !hint && (
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex gap-1">
+            <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        )}
 
         {/* Speech Bubble */}
         {isVisible && hint && (
           <div 
             className={cn(
-              "absolute top-full right-0 mt-2 w-64 p-3 rounded-lg",
-              "bg-card border border-border shadow-lg",
+              "absolute top-full left-1/2 -translate-x-1/2 mt-3 w-64 p-3 rounded-lg",
+              "bg-card border border-border shadow-xl",
               "animate-in fade-in slide-in-from-top-2 duration-200"
             )}
           >
-            {/* Arrow */}
-            <div className="absolute -top-2 right-6 w-4 h-4 bg-card border-l border-t border-border transform rotate-45" />
+            {/* Arrow pointing up */}
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-card border-l border-t border-border transform rotate-45" />
             
             {/* Content */}
-            <p className="text-sm text-foreground relative z-10">{hint}</p>
+            <p className="text-sm text-foreground relative z-10 leading-relaxed">{hint}</p>
             
             {/* Action */}
             <button
@@ -162,19 +231,19 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
                 e.stopPropagation();
                 fetchHint(!!lastError);
               }}
-              className="mt-2 text-xs text-primary hover:underline"
+              className="mt-2 text-xs text-primary hover:underline font-medium"
               disabled={isLoading}
             >
-              {isLoading ? 'Thinking...' : 'Ask for another hint'}
+              {isLoading ? 'Thinking...' : '🐱 Ask for another hint'}
             </button>
           </div>
         )}
 
         {/* Tooltip when not showing hint */}
         {!hint && !isLoading && (
-          <div className="absolute top-full right-0 mt-1 opacity-0 hover:opacity-100 transition-opacity">
+          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity pointer-events-none">
             <span className="text-xs bg-card border border-border px-2 py-1 rounded shadow whitespace-nowrap">
-              Click me for hints! 🐱
+              Click for hints! 🐱
             </span>
           </div>
         )}
