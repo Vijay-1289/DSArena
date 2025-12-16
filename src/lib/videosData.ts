@@ -8,20 +8,6 @@ export type VideoItem = {
 };
 
 export const videoLibrary: VideoItem[] = [
-  // Linked Lists
-  {
-    id: 'll-1',
-    topic: 'Linked Lists',
-    title: 'Linked List Data Structure - Explained',
-    youtubeId: 'njTh_OwMljA',
-  },
-  {
-    id: 'll-2',
-    topic: 'Linked Lists',
-    title: 'Linked List problems & interview patterns',
-    youtubeId: 'UaQxnl2jVnI',
-  },
-
   // Stacks & Queues
   {
     id: 'st-1',
@@ -495,11 +481,11 @@ export const videoLibrary: VideoItem[] = [
 // IMPORTED_VIDEOS_END
 ];
 
-export const topics = ['Linked Lists', 'Stacks & Queues', 'Trees', 'Graphs', 'Dynamic Programming'];
+export const topics = ['Arrays', 'Linked Lists', 'Stacks & Queues', 'Trees', 'Graphs', 'Dynamic Programming'];
 
 // Optional playlist links per topic (external YouTube playlist URLs)
 export const topicPlaylists: Record<string, string> = {
-  'Linked Lists': 'https://youtube.com/playlist?list=PLqM7alHXFySH41ZxzrPNj2pAYPOI8ITe7&si=DimItKuE0T8isBou',
+  // Linked Lists playlist was imported into data; we no longer show a redirect link here
 };
 
 export function getVideosByTopicSlug(slug: string) {
