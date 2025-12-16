@@ -14,7 +14,8 @@ import Profile from "./pages/Profile";
 import PythonTrack from "./pages/PythonTrack";
 import LearningTracks from "./pages/LearningTracks";
 import LanguageTrackPage from "./pages/LanguageTrackPage";
-import VideosPage from "./pages/Videos";
+import VideosIndexPage from "./pages/Videos";
+import VideosTopicPage from "./pages/VideosTopic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +37,8 @@ const App = () => (
             <Route path="/problem/:slug" element={<ProtectedRoute><ProblemDetail /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/videos" element={<ProtectedRoute><VideosPage /></ProtectedRoute>} />
+            <Route path="/videos" element={<ProtectedRoute><VideosIndexPage /></ProtectedRoute>} />
+            <Route path="/videos/:topic" element={<ProtectedRoute><VideosTopicPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

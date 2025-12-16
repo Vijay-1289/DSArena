@@ -1,52 +1,51 @@
-import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
-import { videoLibrary, topics } from '@/lib/videosData';
-import { VideosList } from '@/components/video/VideosList';
-import { VideoPlayer } from '@/components/video/VideoPlayer';
-import { Select } from '@/components/ui/select';
+import { topics, videoLibrary } from '@/lib/videosData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
-export default function VideosPage() {
-  const [topic, setTopic] = useState<string>('All');
-  const [current, setCurrent] = useState<string | null>(videoLibrary[0]?.youtubeId || null);
+function topicSlug(topic: string) {
+  return topic.toLowerCase().replace(/\s+/g, '-');
+}
 
-  const filtered = topic === 'All' ? videoLibrary : videoLibrary.filter(v => v.topic === topic);
+export default function VideosIndexPage() {
+  // Group counts per topic
+  const counts = topics.map((t) => ({ name: t, count: videoLibrary.filter(v => v.topic === t).length }));
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="container mx-auto px-4 py-6 sm:py-8">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="lg:w-2/3">
-            <Card>
-              <CardHeader>
-                <CardTitle>DSA Learning Videos</CardTitle>
-              </CardHeader>
+        <div className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg sm:text-xl">DSA Video Topics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Browse curated topic playlists and watch step-by-step videos for core DSA topics.</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {counts.map((c) => (
+            <Card key={c.name} className="hover:shadow-lg">
               <CardContent>
-                {current ? <VideoPlayer youtubeId={current} /> : <div className="h-64 bg-muted/20 rounded-md" />}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{c.name}</h3>
+                    <p className="text-xs text-muted-foreground">{c.count} videos</p>
+                  </div>
+                  <div>
+                    <Link to={`/videos/${topicSlug(c.name)}`}>
+                      <Button {...({ variant: 'ghost', size: 'sm' } as any)}>Open</Button>
+                    </Link>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-
-            <div className="mt-4">
-              <label className="text-sm text-muted-foreground">Filter by topic</label>
-              <div className="mt-2">
-                <Select value={topic} onChange={(e) => setTopic(e.target.value)}>
-                  <option value="All">All</option>
-                  {topics.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:w-1/3">
-            <VideosList
-              videos={filtered}
-              onSelect={(v) => setCurrent(v.youtubeId)}
-            />
-          </div>
+          ))}
         </div>
       </main>
     </div>

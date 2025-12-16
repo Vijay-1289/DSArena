@@ -66,6 +66,22 @@ export const videoLibrary: VideoItem[] = [
     title: 'Dynamic Programming - Beginner to Advanced',
     youtubeId: 'OQ5jsbhAv_M',
   },
+
+  // Marker for automated playlist imports. Tools/scripts can insert generated items
+  // between IMPORTED_VIDEOS_START and IMPORTED_VIDEOS_END. Do not remove these markers.
+  // IMPORTED_VIDEOS_START
+  // IMPORTED_VIDEOS_END
 ];
 
 export const topics = Array.from(new Set(videoLibrary.map((v) => v.topic)));
+
+export function getVideosByTopicSlug(slug: string) {
+  const normalized = slug.replace(/-/g, ' ').toLowerCase();
+  return videoLibrary.filter((v) => v.topic.toLowerCase() === normalized);
+}
+
+export function getTopicNameFromSlug(slug: string) {
+  const normalized = slug.replace(/-/g, ' ').toLowerCase();
+  const found = topics.find((t) => t.toLowerCase() === normalized);
+  return found || slug;
+}
