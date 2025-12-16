@@ -109,8 +109,7 @@ export default function VideosTopicPage() {
                     )}
                   </CardContent>
                 </Card>
-
-            </div>
+              </div>            </div>
           </section>
         </div>
       </main>
