@@ -6,6 +6,7 @@ import { VideosList } from '@/components/video/VideosList';
 import { VideoPlayer } from '@/components/video/VideoPlayer';
 import { getVideosByTopicSlug, getTopicNameFromSlug } from '@/lib/videosData';
 import { Button } from '@/components/ui/button';
+import { sanitizeTitle } from '@/lib/utils';
 
 function thumbFor(v: any) {
   return v.youtubeId ? `https://img.youtube.com/vi/${v.youtubeId}/mqdefault.jpg` : undefined;
@@ -66,14 +67,14 @@ export default function VideosTopicPage() {
                     >
                       <div className="w-20 h-12 rounded-md overflow-hidden bg-muted/10 flex-shrink-0">
                         {thumbFor(v) ? (
-                          <img src={thumbFor(v)} alt={v.title} className="w-full h-full object-cover" />
+                          <img src={thumbFor(v)} alt={sanitizeTitle(v.title)} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-muted-foreground">No preview</div>
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium truncate">{v.title}</div>
+                        <div className="font-medium truncate">{sanitizeTitle(v.title)}</div>
                       </div>
                     </button>
                   ))}
@@ -88,13 +89,13 @@ export default function VideosTopicPage() {
               <div>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg sm:text-xl">{current?.title || topicName}</CardTitle>
+                    <CardTitle className="text-lg sm:text-xl">{sanitizeTitle(current?.title) || topicName}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">{current?.topic}</p>
                   </CardHeader>
                   <CardContent>
                     {current ? (
                       <div className="space-y-3">
-                        <VideoPlayer youtubeId={current.youtubeId} fileUrl={current.fileUrl} title={current.title} />
+                        <VideoPlayer youtubeId={current.youtubeId} fileUrl={current.fileUrl} title={sanitizeTitle(current.title)} />
 
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">

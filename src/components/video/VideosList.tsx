@@ -1,4 +1,5 @@
 import { VideoItem } from '@/lib/videosData';
+import { sanitizeTitle } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -24,7 +25,7 @@ export function VideosList({ videos, onSelect }: Props) {
         >
           <div className="w-28 h-16 rounded-md overflow-hidden bg-muted/10 flex-shrink-0">
             {getThumb(v.youtubeId) ? (
-              <img src={getThumb(v.youtubeId)} alt={v.title} className="w-full h-full object-cover" />
+              <img src={getThumb(v.youtubeId)} alt={sanitizeTitle(v.title)} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-muted-foreground">No preview</div>
             )}
@@ -32,7 +33,7 @@ export function VideosList({ videos, onSelect }: Props) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-sm sm:text-base truncate">{v.title}</CardTitle>
+              <CardTitle className="text-sm sm:text-base truncate">{sanitizeTitle(v.title)}</CardTitle>
               <div className="flex items-center gap-2">
                 <Button {...({ variant: 'ghost', size: 'sm' } as any)} onClick={(e) => { e.stopPropagation(); onSelect(v); }}>
                   Play
