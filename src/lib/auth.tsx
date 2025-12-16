@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { syncProgressToSupabase } from '@/lib/progressStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -20,10 +21,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Push any local progress cached while anonymous to Supabase for this user
+          try {
+            await syncProgressToSupabase(session.user.id);
+          } catch (e) {
+            console.warn('Error syncing local progress on sign-in', e);
+          }
+        }
       }
     );
 

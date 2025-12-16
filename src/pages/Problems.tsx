@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { ProblemCard } from '@/components/problems/ProblemCard';
 import { Input } from '@/components/ui/input';
@@ -12,27 +12,15 @@ import {
 } from '@/components/ui/select';
 import { problemsData, topicsData } from '@/lib/problemsData';
 import { useAuth } from '@/lib/auth';
-import { fetchSolvedProblems } from '@/lib/progressStorage';
 import { Search } from 'lucide-react';
+import { useUserProgress } from '@/hooks/useUserProgress';
 
 export default function Problems() {
-  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const { user } = useAuth();
-
-  useEffect(() => {
-    if (user) {
-      loadSolvedProblems();
-    }
-  }, [user]);
-
-  const loadSolvedProblems = async () => {
-    if (!user) return;
-    const solved = await fetchSolvedProblems(user.id);
-    setSolvedIds(solved);
-  };
+  const { solvedIds } = useUserProgress(user?.id);
 
   const filteredProblems = problemsData.filter((problem) => {
     const matchesSearch = problem.title.toLowerCase().includes(search.toLowerCase());

@@ -60,6 +60,12 @@ export function Navbar() {
                   Dashboard
                 </Button>
               </Link>
+              <Link to="/videos">
+                <Button variant="ghost" size="sm">
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Videos
+                </Button>
+              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
@@ -97,6 +103,11 @@ export function Navbar() {
               <Link to="/learning-tracks">
                 <Button variant="ghost" size="sm">
                   Tracks
+                </Button>
+              </Link>
+              <Link to="/videos">
+                <Button variant="ghost" size="sm">
+                  Videos
                 </Button>
               </Link>
               <Link to="/auth">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useUserProgress } from '@/hooks/useUserProgress';
 import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Badge } from '@/components/ui/badge';
@@ -26,15 +27,14 @@ import {
 } from '@/components/ui/dialog';
 
 export default function PythonTrack() {
-  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [showCertificate, setShowCertificate] = useState(false);
   const { user } = useAuth();
+  const { solvedIds, refresh } = useUserProgress(user?.id);
 
   useEffect(() => {
-    if (user) {
-      fetchSolvedProblems(user.id).then(setSolvedIds);
-    }
-  }, [user]);
+    if (!user) return;
+    refresh();
+  }, [user, refresh]);
 
   const solvedCount = pythonProblemsData.filter(p => solvedIds.has(p.id)).length;
   const progressPercent = (solvedCount / PYTHON_TRACK_TOTAL) * 100;

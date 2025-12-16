@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth';
 import { fetchSolvedProblems } from '@/lib/progressStorage';
+import { useUserProgress } from '@/hooks/useUserProgress';
 import { languageTracks, getAvailableTracks, getComingSoonTracks } from '@/lib/languageTracksData';
 import { LivesDisplay } from '@/components/lives/LivesDisplay';
 import { Lock, ArrowRight, CheckCircle2, Code2 } from 'lucide-react';
@@ -14,13 +15,13 @@ import { Lock, ArrowRight, CheckCircle2, Code2 } from 'lucide-react';
 export default function LearningTracks() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
+  const { solvedIds, refresh } = useUserProgress(user?.id);
 
   useEffect(() => {
-    if (user) {
-      fetchSolvedProblems(user.id).then(setSolvedIds);
-    }
-  }, [user]);
+    if (!user) return;
+    // keep local storage in sync when component mounts
+    refresh();
+  }, [user, refresh]);
 
   const availableTracks = getAvailableTracks();
   const comingSoonTracks = getComingSoonTracks();

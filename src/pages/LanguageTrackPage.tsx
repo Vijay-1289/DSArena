@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useUserProgress } from '@/hooks/useUserProgress';
 import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Badge } from '@/components/ui/badge';
@@ -30,14 +31,19 @@ export default function LanguageTrackPage() {
   const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [showCertificate, setShowCertificate] = useState(false);
   const { user } = useAuth();
+  const { solvedIds, refresh } = useUserProgress(user?.id);
 
   // Get track from URL path slug
   const trackSlug = slug || '';
   const track = getTrackBySlug(trackSlug);
   const problems = track?.problems || [];
+
+  useEffect(() => {
+    if (!user) return;
+    refresh();
+  }, [user, refresh]);
 
   useEffect(() => {
     if (!track || !track.isAvailable) {
