@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useUserProgress } from '@/hooks/useUserProgress';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
@@ -52,8 +51,8 @@ export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
-  const { solvedIds, refresh } = useUserProgress(user?.id);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -64,9 +63,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (user) {
       fetchDashboardData();
-      refresh();
     }
-  }, [user, refresh]);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     if (!user) return;

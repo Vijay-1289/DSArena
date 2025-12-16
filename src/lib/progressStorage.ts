@@ -177,22 +177,12 @@ export async function fetchSolvedProblems(userId: string): Promise<Set<string>> 
       return new Set(local.solvedProblems);
     }
 
-    const solvedIds = new Set<string>(data.map((d: any) => String(d.problem_id)));
+    const solvedIds = new Set(data.map(d => d.problem_id));
 
     // Merge with local progress for this specific user
     const local = getLocalProgress(userId);
     for (const id of local.solvedProblems) {
       solvedIds.add(id);
-    }
-
-    // Keep local storage consistent with DB
-    try {
-      local.solvedProblems = Array.from(solvedIds);
-      local.lastUpdated = new Date().toISOString();
-      local.userId = userId;
-      localStorage.setItem(getProgressKey(userId), JSON.stringify(local));
-    } catch (e) {
-      console.warn('Could not sync local progress cache', e);
     }
 
     return solvedIds;
