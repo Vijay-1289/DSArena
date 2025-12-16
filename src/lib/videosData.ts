@@ -1,26 +1,13 @@
 export type VideoItem = {
   id: string;
   title: string;
-  youtubeId: string;
+  youtubeId?: string;
+  fileUrl?: string; // optional direct URL (mp4, webm) for native playback
   topic: string;
   description?: string;
 };
 
 export const videoLibrary: VideoItem[] = [
-  // Arrays
-  {
-    id: 'arr-1',
-    topic: 'Arrays',
-    title: 'Introduction to Arrays - Crash Course',
-    youtubeId: 'w5m7J5J0Y2Y',
-  },
-  {
-    id: 'arr-2',
-    topic: 'Arrays',
-    title: 'Array problems & techniques',
-    youtubeId: 'sXk2qJmXKk8',
-  },
-
   // Linked Lists
   {
     id: 'll-1',
