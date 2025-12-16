@@ -3,8 +3,12 @@
 // src/lib/videosData.ts between the IMPORTED_VIDEOS_START and IMPORTED_VIDEOS_END markers.
 // Usage: YT_API_KEY=xxx node scripts/importPlaylist.js PLAYLIST_ID "Topic Name"
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const API_KEY = process.env.YT_API_KEY;
 if (!API_KEY) {
@@ -74,16 +78,30 @@ function makeEntry(item) {
     const before = file.slice(0, startIdx + startMarker.length);
     const after = file.slice(endIdx);
 
-    const generated = entries.map(e => `  {
-    id: '${e.id}',
-    topic: '${e.topic.replace(/'/g, "\\'")}',
-    title: '${e.title.replace(/'/g, "\\'")}',
-    youtubeId: '${e.youtubeId}',
-    description: '${(e.description || '').replace(/'/g, "\\'")}',
-  },`).join('\n');
+    // Remove any existing objects that match playlist video youtubeIds so we re-insert sanitized versions
+    const playlistIds = new Set(entries.map(e => e.youtubeId));
+    let cleanedFile = file;
+    for (const vid of playlistIds) {
+      // remove any object literal that contains youtubeId: 'vid'
+      const objRegex = new RegExp(`\{[\s\S]*?youtubeId:\s*'${vid}'[\s\S]*?\},?`, 'g');
+      cleanedFile = cleanedFile.replace(objRegex, '');
+    }
 
-    // Insert generated entries between the markers
-    let intermediate = `${before}\n\n${generated}\n${after}`;
+    // Now rebuild the markers positions from the cleaned file
+    const startIdxClean = cleanedFile.indexOf(startMarker);
+    const endIdxClean = cleanedFile.indexOf(endMarker);
+    if (startIdxClean === -1 || endIdxClean === -1 || endIdxClean < startIdxClean) {
+      console.error('Could not find import markers in videosData.ts (after cleaning)');
+      process.exit(1);
+    }
+    const beforeClean = cleanedFile.slice(0, startIdxClean + startMarker.length);
+    const afterClean = cleanedFile.slice(endIdxClean);
+
+    // Generate sanitized entries using JSON.stringify to escape newlines and quotes
+    const generated = entries.map(e => `  {\n    id: ${JSON.stringify(e.id)},\n    topic: ${JSON.stringify(e.topic)},\n    title: ${JSON.stringify(e.title)},\n    youtubeId: ${JSON.stringify(e.youtubeId)},\n    description: ${JSON.stringify(e.description || '')},\n  },`).join('\n');
+
+    // Insert generated entries between the markers in the cleaned file
+    let intermediate = `${beforeClean}\n\n${generated}\n${afterClean}`;
 
     // Now regenerate the topics export based on all items in the file (existing + inserted)
     // Extract all topic strings by simple regex
