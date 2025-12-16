@@ -7,28 +7,41 @@ type Props = {
   onSelect: (v: VideoItem) => void;
 };
 
+function getThumb(youtubeId?: string) {
+  return youtubeId ? `https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg` : undefined;
+}
+
 export function VideosList({ videos, onSelect }: Props) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {videos.map((v) => (
-        <Card key={v.id} className="hover:shadow-md">
-          <CardHeader className="p-3">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className="text-sm sm:text-base">{v.title}</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{v.description}</p>
-              </div>
+        <div
+          key={v.id}
+          role="button"
+          tabIndex={0}
+          onClick={() => onSelect(v)}
+          className="flex items-center gap-3 p-3 rounded-md hover:bg-accent/5 focus:outline-none transition cursor-pointer"
+        >
+          <div className="w-28 h-16 rounded-md overflow-hidden bg-muted/10 flex-shrink-0">
+            {getThumb(v.youtubeId) ? (
+              <img src={getThumb(v.youtubeId)} alt={v.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground">No preview</div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-sm sm:text-base truncate">{v.title}</CardTitle>
               <div className="flex items-center gap-2">
-                <Button {...({ variant: 'ghost', size: 'sm' } as any)} onClick={() => onSelect(v)}>
+                <Button {...({ variant: 'ghost', size: 'sm' } as any)} onClick={(e) => { e.stopPropagation(); onSelect(v); }}>
                   Play
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-3 pt-0">
-            <div className="text-xs text-muted-foreground">Topic: {v.topic}</div>
-          </CardContent>
-        </Card>
+            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{v.description}</p>
+          </div>
+        </div>
       ))}
     </div>
   );
