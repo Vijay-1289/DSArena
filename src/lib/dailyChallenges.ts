@@ -33,13 +33,15 @@ class DailyChallengeService {
   private readonly STORAGE_KEY = 'daily_challenge_progress';
   private readonly STREAK_KEY = 'daily_streak';
 
-  // Get today's challenge
+  // Get today's challenge - Same for all users
   async getTodayChallenge(): Promise<DailyChallenge> {
     const today = new Date().toISOString().split('T')[0];
     return await this.generateDailyChallenge(today);
   }
 
-  // Generate a daily challenge (on-the-fly, no storage)
+  // Generate a daily challenge (on-the-fly, deterministic)
+  // NOTE: This system ensures ALL users see the SAME daily challenge for any given date
+  // Uses date-based seeding for consistency across all users worldwide
   async generateDailyChallenge(date: string): Promise<DailyChallenge> {
     try {
       // Select a problem based on date (deterministic)

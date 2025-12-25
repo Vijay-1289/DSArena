@@ -45,6 +45,7 @@ import { getLocalLivesData, loseLife, hasLives, formatTimeRemaining, getTimeUnti
 import { LivesDisplay } from '@/components/lives/LivesDisplay';
 import { GlitchyAssistant } from '@/components/editor/GlitchyAssistant';
 import { LanguageSelector } from '@/components/editor/LanguageSelector';
+import { StoryGenerator } from '@/components/problems/StoryGenerator';
 
 export default function DailyChallengePage() {
   const [challenge, setChallenge] = useState<DailyChallenge | null>(null);
@@ -53,7 +54,7 @@ export default function DailyChallengePage() {
   const [error, setError] = useState<string | null>(null);
   const [todaySolved, setTodaySolved] = useState(false);
   const [userStreak, setUserStreak] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
+
   const [code, setCode] = useState('');
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -209,24 +210,7 @@ int main() {
     }
   };
 
-  const generateNewChallenge = async () => {
-    if (!user) {
-      toast.error('Please login to access daily challenges');
-      return;
-    }
 
-    try {
-      setIsGenerating(true);
-      const newChallenge = await dailyChallengeService.generateDailyChallenge(today);
-      setChallenge(newChallenge);
-      toast.success('New daily challenge generated!');
-    } catch (err) {
-      console.error('Failed to generate challenge:', err);
-      toast.error('Failed to generate new challenge. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   const markAsSolved = async () => {
     if (!challenge) return;
@@ -568,26 +552,10 @@ int main() {
 
       {/* Lives Warning Banner */}
       {!todaySolved && (
-        <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
+        <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-center">
           <span className="text-xs text-muted-foreground">
             ⚠️ Leaving this page will cost you a life!
           </span>
-          {user && (
-            <Button
-              onClick={generateNewChallenge}
-              disabled={isGenerating}
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              {isGenerating ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Zap className="h-3 w-3" />
-              )}
-              New Challenge
-            </Button>
-          )}
         </div>
       )}
 
@@ -727,6 +695,24 @@ int main() {
                       </div>
                     </>
                   )}
+
+                  {/* Story Generator for Dynamic Story Creation */}
+                  <Separator />
+                  <StoryGenerator
+                    problem={{
+                      id: challenge.id,
+                      title: challenge.title,
+                      description: challenge.description,
+                      difficulty: challenge.difficulty,
+                      category: challenge.category,
+                      language: selectedLanguage
+                    }}
+                    onStoryGenerated={(story) => {
+                      // Update challenge with generated story
+                      setChallenge(prev => prev ? { ...prev, story } : null);
+                    }}
+                    className="mt-4"
+                  />
                 </div>
               </ScrollArea>
             </div>
