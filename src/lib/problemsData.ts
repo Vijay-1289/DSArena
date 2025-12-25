@@ -20,6 +20,7 @@ export interface ProblemData {
   visibleTestCases: { input: string; expectedOutput: string }[];
   hiddenTestCases: { input: string; expectedOutput: string }[];
   language?: 'python' | 'javascript' | 'java' | 'cpp' | 'go' | 'rust' | 'csharp' | 'ruby' | 'swift' | 'kotlin';
+  story?: string;
 }
 
 // Helper to determine difficulty based on problem complexity

@@ -1,5 +1,4 @@
-// Daily Challenge Service - Manages daily coding challenges and user progress
-import { supabase } from '@/integrations/supabase/client';
+// Daily Challenge Service - Manages daily coding challenges and user progress (Local Storage Version)
 import { problemsData } from './problemsData';
 
 export interface DailyChallenge {
@@ -23,7 +22,6 @@ export interface DailyChallenge {
 }
 
 export interface DailyChallengeProgress {
-  userId: string;
   challengeDate: string;
   isCompleted: boolean;
   solvedAt?: string;
@@ -32,54 +30,42 @@ export interface DailyChallengeProgress {
 }
 
 class DailyChallengeService {
+  private readonly STORAGE_KEY = 'daily_challenge_progress';
+  private readonly STREAK_KEY = 'daily_streak';
+
   // Get today's challenge
   async getTodayChallenge(): Promise<DailyChallenge> {
     const today = new Date().toISOString().split('T')[0];
-    
-    try {
-      // Try to get existing challenge for today
-      const { data: existingChallenge, error } = await supabase
-        .from('daily_challenges')
-        .select('*')
-        .eq('date', today)
-        .single();
-
-      if (existingChallenge && !error) {
-        return this.transformChallenge(existingChallenge);
-      }
-
-      // If no challenge exists for today, generate one
-      return await this.generateDailyChallenge(today);
-    } catch (error) {
-      console.error('Error fetching today challenge:', error);
-      throw new Error('Failed to fetch today\'s challenge. Please check your database connection.');
-    }
+    return await this.generateDailyChallenge(today);
   }
 
-  // Generate a new daily challenge
+  // Generate a daily challenge (on-the-fly, no storage)
   async generateDailyChallenge(date: string): Promise<DailyChallenge> {
     try {
-      // Select a random problem from the problems database
+      // Select a problem based on date (deterministic)
       const availableProblems = problemsData;
       if (!availableProblems || availableProblems.length === 0) {
         throw new Error('No problems available for daily challenge generation');
       }
 
-      const randomProblem = availableProblems[Math.floor(Math.random() * availableProblems.length)];
+      // Use date as seed for consistent daily challenge
+      const seed = this.getSeedFromDate(date);
+      const selectedIndex = seed % availableProblems.length;
+      const randomProblem = availableProblems[selectedIndex];
 
-      // Create challenge data
-      const challengeData = {
+      return {
+        id: `${date}-${selectedIndex}`,
         date,
         title: randomProblem.title,
         description: randomProblem.description,
         category: randomProblem.category,
         difficulty: randomProblem.difficulty,
-        input_format: randomProblem.inputFormat,
-        output_format: randomProblem.outputFormat,
+        inputFormat: randomProblem.inputFormat,
+        outputFormat: randomProblem.outputFormat,
         constraints: randomProblem.constraints,
-        time_limit_ms: randomProblem.timeLimitMs,
-        memory_limit_mb: randomProblem.memoryLimitMb,
-        test_cases: [
+        timeLimitMs: randomProblem.timeLimitMs,
+        memoryLimitMb: randomProblem.memoryLimitMb,
+        testCases: [
           ...randomProblem.visibleTestCases.map(tc => ({
             input: tc.input,
             expectedOutput: tc.expectedOutput,
@@ -90,105 +76,73 @@ class DailyChallengeService {
             expectedOutput: tc.expectedOutput,
             is_visible: false
           }))
-        ]
+        ],
+        story: randomProblem.story
       };
-
-      // Insert into database
-      const { data: newChallenge, error } = await supabase
-        .from('daily_challenges')
-        .insert([challengeData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating daily challenge:', error);
-        throw new Error(`Failed to create daily challenge: ${error.message}`);
-      }
-
-      if (!newChallenge) {
-        throw new Error('No challenge data returned from database');
-      }
-
-      return this.transformChallenge(newChallenge);
     } catch (error) {
       console.error('Error generating daily challenge:', error);
-      if (error instanceof Error) {
-        throw error;
-      }
       throw new Error('Failed to generate daily challenge');
     }
   }
 
-  // Get user progress for a specific challenge
-  async getUserChallengeProgress(userId: string, challengeDate: string): Promise<DailyChallengeProgress | null> {
+  // Generate deterministic seed from date
+  private getSeedFromDate(date: string): number {
+    let seed = 0;
+    for (let i = 0; i < date.length; i++) {
+      seed = (seed * 31 + date.charCodeAt(i)) >>> 0;
+    }
+    return seed;
+  }
+
+  // Get today's challenge progress
+  async getTodayChallengeProgress(): Promise<DailyChallengeProgress | null> {
+    const today = new Date().toISOString().split('T')[0];
+    return this.getChallengeProgress(today);
+  }
+
+  // Get challenge progress from localStorage
+  getChallengeProgress(challengeDate: string): DailyChallengeProgress | null {
     try {
-      const { data, error } = await supabase
-        .from('daily_challenge_progress')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('challenge_date', challengeDate)
-        .single();
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (!stored) return null;
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error fetching user progress:', error);
-        return null;
-      }
-
-      return data ? {
-        userId: data.user_id,
-        challengeDate: data.challenge_date,
-        isCompleted: data.is_completed,
-        solvedAt: data.solved_at,
-        runtimeMs: data.runtime_ms,
-        language: data.language
-      } : null;
+      const progressData = JSON.parse(stored);
+      return progressData[challengeDate] || null;
     } catch (error) {
-      console.error('Error fetching user progress:', error);
+      console.error('Error reading challenge progress:', error);
       return null;
     }
   }
 
   // Check if user has solved today's challenge
-  async hasUserSolvedToday(userId: string): Promise<boolean> {
+  async hasUserSolvedToday(): Promise<boolean> {
     const today = new Date().toISOString().split('T')[0];
-    
-    try {
-      const { data, error } = await supabase
-        .from('daily_challenge_progress')
-        .select('is_completed')
-        .eq('user_id', userId)
-        .eq('challenge_date', today)
-        .eq('is_completed', true)
-        .single();
-
-      return !error && !!data;
-    } catch (error) {
-      return false;
-    }
+    const progress = this.getChallengeProgress(today);
+    return progress?.isCompleted || false;
   }
 
-  // Update user progress
-  async updateChallengeProgress(userId: string, challengeDate: string, progress: Partial<DailyChallengeProgress>): Promise<void> {
+  // Update challenge progress and streak
+  async updateChallengeProgress(challengeDate: string, progress: Partial<DailyChallengeProgress>): Promise<void> {
     try {
-      const updateData = {
-        user_id: userId,
-        challenge_date: challengeDate,
-        is_completed: progress.isCompleted,
-        solved_at: progress.solvedAt,
-        runtime_ms: progress.runtimeMs,
-        language: progress.language,
-        updated_at: new Date().toISOString()
+      // Get existing progress data
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const progressData = stored ? JSON.parse(stored) : {};
+
+      // Update progress for this challenge
+      const updatedProgress: DailyChallengeProgress = {
+        challengeDate,
+        isCompleted: progress.isCompleted || false,
+        solvedAt: progress.solvedAt,
+        runtimeMs: progress.runtimeMs,
+        language: progress.language
       };
 
-      const { error } = await supabase
-        .from('daily_challenge_progress')
-        .upsert([updateData], {
-          onConflict: 'user_id,challenge_date'
-        });
+      progressData[challengeDate] = updatedProgress;
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(progressData));
 
-      if (error) {
-        console.error('Error updating progress:', error);
-        throw error;
+      // Update streak if challenge was completed
+      if (progress.isCompleted) {
+        await this.updateDailyStreak(challengeDate);
       }
     } catch (error) {
       console.error('Error updating challenge progress:', error);
@@ -196,134 +150,81 @@ class DailyChallengeService {
     }
   }
 
-  // Get user's daily streak
-  async getUserDailyStreak(userId: string): Promise<number> {
+  // Update daily streak
+  private async updateDailyStreak(completionDate: string): Promise<void> {
     try {
-      // Get all completed challenges for the user, ordered by date
-      const { data: completions, error } = await supabase
-        .from('daily_challenge_progress')
-        .select('challenge_date, is_completed')
-        .eq('user_id', userId)
-        .eq('is_completed', true)
-        .order('challenge_date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching streak data:', error);
-        return 0;
-      }
-
-      if (!completions || completions.length === 0) {
-        return 0;
-      }
-
-      // Calculate streak
-      const today = new Date();
-      let streak = 0;
-      let currentDate = new Date(today);
-
-      for (const completion of completions) {
-        const completionDate = new Date(completion.challenge_date);
-        
-        // Check if this completion is consecutive
-        const daysDiff = Math.floor((currentDate.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (daysDiff === streak) {
-          streak++;
-          currentDate = completionDate;
-        } else {
-          break;
-        }
-      }
-
-      return streak;
+      const streak = this.calculateStreak(completionDate);
+      localStorage.setItem(this.STREAK_KEY, JSON.stringify({ 
+        currentStreak: streak, 
+        lastUpdated: completionDate 
+      }));
     } catch (error) {
-      console.error('Error calculating streak:', error);
+      console.error('Error updating streak:', error);
+    }
+  }
+
+  // Get user's daily streak
+  async getUserDailyStreak(): Promise<number> {
+    try {
+      const stored = localStorage.getItem(this.STREAK_KEY);
+      if (!stored) return 0;
+
+      const streakData = JSON.parse(stored);
+      return streakData.currentStreak || 0;
+    } catch (error) {
+      console.error('Error fetching streak:', error);
       return 0;
     }
   }
 
-  // Get user's challenge history
-  async getUserChallengeHistory(userId: string, limit: number = 30): Promise<DailyChallengeProgress[]> {
-    try {
-      // Get progress data without join to avoid relationship issues
-      const { data: progressData, error: progressError } = await supabase
-        .from('daily_challenge_progress')
-        .select('*')
-        .eq('user_id', userId)
-        .order('challenge_date', { ascending: false })
-        .limit(limit);
+  // Calculate streak from completion data
+  private calculateStreak(latestCompletionDate: string): number {
+    const stored = localStorage.getItem(this.STORAGE_KEY);
+    if (!stored) return 1;
 
-      if (progressError) {
-        console.error('Error fetching challenge progress:', progressError);
-        return [];
-      }
+    const progressData = JSON.parse(stored);
+    const completions = Object.values(progressData)
+      .filter((p: any) => p.isCompleted)
+      .map((p: any) => p.challengeDate)
+      .sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime());
 
-      if (!progressData || progressData.length === 0) {
-        return [];
-      }
+    if (completions.length === 0) return 1;
 
-      // Get challenge details separately
-      const dates = progressData.map(p => p.challenge_date);
-      const { data: challengeData, error: challengeError } = await supabase
-        .from('daily_challenges')
-        .select('date, title, difficulty, category')
-        .in('date', dates);
+    // Calculate consecutive days from the latest completion
+    let streak = 1;
+    let currentDate = new Date(latestCompletionDate);
 
-      if (challengeError) {
-        console.error('Error fetching challenge details:', challengeError);
-        // Return progress data without challenge details
-        return progressData.map(item => ({
-          userId: item.user_id,
-          challengeDate: item.challenge_date,
-          isCompleted: item.is_completed,
-          solvedAt: item.solved_at,
-          runtimeMs: item.runtime_ms,
-          language: item.language
-        }));
-      }
-
-      // Combine progress and challenge data
-      const challengeMap = new Map(challengeData?.map(c => [c.date, c]) || []);
+    for (let i = 1; i < completions.length; i++) {
+      const completionDate = new Date(completions[i]);
+      const daysDiff = Math.floor((currentDate.getTime() - completionDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      return progressData.map(item => {
-        const challenge = challengeMap.get(item.challenge_date);
-        return {
-          userId: item.user_id,
-          challengeDate: item.challenge_date,
-          isCompleted: item.is_completed,
-          solvedAt: item.solved_at,
-          runtimeMs: item.runtime_ms,
-          language: item.language,
-          challenge: challenge ? {
-            title: challenge.title,
-            difficulty: challenge.difficulty,
-            category: challenge.category
-          } : undefined
-        };
-      });
+      if (daysDiff === 1) {
+        streak++;
+        currentDate = completionDate;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  // Get user's challenge history
+  async getChallengeHistory(limit: number = 30): Promise<DailyChallengeProgress[]> {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (!stored) return [];
+
+      const progressData = JSON.parse(stored);
+      const history = Object.values(progressData)
+        .sort((a: any, b: any) => new Date(b.challengeDate).getTime() - new Date(a.challengeDate).getTime())
+        .slice(0, limit);
+
+      return history as DailyChallengeProgress[];
     } catch (error) {
       console.error('Error fetching challenge history:', error);
       return [];
     }
-  }
-
-  // Transform database challenge to frontend format
-  private transformChallenge(dbChallenge: any): DailyChallenge {
-    return {
-      id: dbChallenge.id,
-      date: dbChallenge.date,
-      title: dbChallenge.title,
-      description: dbChallenge.description,
-      category: dbChallenge.category,
-      difficulty: dbChallenge.difficulty,
-      inputFormat: dbChallenge.input_format,
-      outputFormat: dbChallenge.output_format,
-      constraints: dbChallenge.constraints,
-      timeLimitMs: dbChallenge.time_limit_ms,
-      memoryLimitMb: dbChallenge.memory_limit_mb,
-      testCases: dbChallenge.test_cases || [],
-      story: dbChallenge.story
-    };
   }
 
   // Get available challenges for a date range (for calendar view)
@@ -333,22 +234,25 @@ class DailyChallengeService {
     userCompleted?: boolean;
   }>> {
     try {
-      const { data: challenges, error } = await supabase
-        .from('daily_challenges')
-        .select('*')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: true });
+      const calendarItems = [];
+      const current = new Date(startDate);
+      const end = new Date(endDate);
 
-      if (error) {
-        console.error('Error fetching challenge calendar:', error);
-        return [];
+      while (current <= end) {
+        const dateStr = current.toISOString().split('T')[0];
+        const challenge = await this.generateDailyChallenge(dateStr);
+        const progress = this.getChallengeProgress(dateStr);
+        
+        calendarItems.push({
+          date: dateStr,
+          challenge,
+          userCompleted: progress?.isCompleted || false
+        });
+
+        current.setDate(current.getDate() + 1);
       }
 
-      return challenges?.map(challenge => ({
-        date: challenge.date,
-        challenge: this.transformChallenge(challenge)
-      })) || [];
+      return calendarItems;
     } catch (error) {
       console.error('Error fetching challenge calendar:', error);
       return [];
@@ -356,7 +260,7 @@ class DailyChallengeService {
   }
 
   // Get daily challenge statistics for the user
-  async getUserChallengeStats(userId: string): Promise<{
+  async getUserChallengeStats(): Promise<{
     totalCompleted: number;
     currentStreak: number;
     longestStreak: number;
@@ -368,15 +272,8 @@ class DailyChallengeService {
     };
   }> {
     try {
-      // Get progress data without join
-      const { data: progressData, error: progressError } = await supabase
-        .from('daily_challenge_progress')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_completed', true);
-
-      if (progressError) {
-        console.error('Error fetching challenge stats:', progressError);
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (!stored) {
         return {
           totalCompleted: 0,
           currentStreak: 0,
@@ -386,44 +283,29 @@ class DailyChallengeService {
         };
       }
 
-      const totalCompleted = progressData?.length || 0;
-      const currentStreak = await this.getUserDailyStreak(userId);
+      const progressData = JSON.parse(stored);
+      const completedChallenges = Object.values(progressData).filter((p: any) => p.isCompleted) as DailyChallengeProgress[];
       
-      // Calculate difficulty breakdown if we have progress data
+      const totalCompleted = completedChallenges.length;
+      const currentStreak = await this.getUserDailyStreak();
+      
+      // Calculate difficulty breakdown
       const difficultyBreakdown = { easy: 0, medium: 0, hard: 0 };
       let totalRuntime = 0;
       let runtimeCount = 0;
 
-      if (progressData && progressData.length > 0) {
-        // Get challenge details for difficulty breakdown
-        const dates = progressData.map(p => p.challenge_date);
-        const { data: challengeData, error: challengeError } = await supabase
-          .from('daily_challenges')
-          .select('date, difficulty')
-          .in('date', dates);
-
-        if (!challengeError && challengeData) {
-          const challengeMap = new Map(challengeData.map(c => [c.date, c.difficulty]));
-          
-          progressData.forEach(item => {
-            const difficulty = challengeMap.get(item.challenge_date);
-            if (difficulty && difficultyBreakdown.hasOwnProperty(difficulty)) {
-              difficultyBreakdown[difficulty as keyof typeof difficultyBreakdown]++;
-            }
-            
-            if (item.runtime_ms) {
-              totalRuntime += item.runtime_ms;
-              runtimeCount++;
-            }
-          });
-        } else {
-          // If challenge data fetch fails, just calculate runtime stats
-          progressData.forEach(item => {
-            if (item.runtime_ms) {
-              totalRuntime += item.runtime_ms;
-              runtimeCount++;
-            }
-          });
+      for (const challenge of completedChallenges) {
+        // Get challenge details to determine difficulty
+        const challengeData = await this.generateDailyChallenge(challenge.challengeDate);
+        const difficulty = challengeData.difficulty;
+        
+        if (difficultyBreakdown.hasOwnProperty(difficulty)) {
+          difficultyBreakdown[difficulty as keyof typeof difficultyBreakdown]++;
+        }
+        
+        if (challenge.runtimeMs) {
+          totalRuntime += challenge.runtimeMs;
+          runtimeCount++;
         }
       }
 
@@ -444,6 +326,12 @@ class DailyChallengeService {
         difficultyBreakdown: { easy: 0, medium: 0, hard: 0 }
       };
     }
+  }
+
+  // Clear all progress data (for testing)
+  clearAllProgress(): void {
+    localStorage.removeItem(this.STORAGE_KEY);
+    localStorage.removeItem(this.STREAK_KEY);
   }
 }
 

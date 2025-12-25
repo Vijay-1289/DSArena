@@ -189,24 +189,18 @@ int main() {
       setIsLoading(true);
       setError(null);
 
-      if (user) {
-        // Load today's challenge and user progress
-        const [todayChallenge, progress, solved, streak] = await Promise.all([
-          dailyChallengeService.getTodayChallenge(),
-          dailyChallengeService.getUserChallengeProgress(user.id, today),
-          dailyChallengeService.hasUserSolvedToday(user.id),
-          dailyChallengeService.getUserDailyStreak(user.id)
-        ]);
+      // Load today's challenge
+      const todayChallenge = await dailyChallengeService.getTodayChallenge();
+      setChallenge(todayChallenge);
 
-        setChallenge(todayChallenge);
-        setUserProgress(progress);
-        setTodaySolved(solved);
-        setUserStreak(streak);
-      } else {
-        // Load challenge without user progress
-        const todayChallenge = await dailyChallengeService.getTodayChallenge();
-        setChallenge(todayChallenge);
-      }
+      // Load user progress (works for both logged in and anonymous users)
+      const progress = await dailyChallengeService.getTodayChallengeProgress();
+      const solved = await dailyChallengeService.hasUserSolvedToday();
+      const streak = await dailyChallengeService.getUserDailyStreak();
+
+      setUserProgress(progress);
+      setTodaySolved(solved);
+      setUserStreak(streak);
     } catch (err) {
       console.error('Failed to load daily challenge:', err);
       setError('Failed to load daily challenge. Please try again.');
@@ -235,7 +229,7 @@ int main() {
   };
 
   const markAsSolved = async () => {
-    if (!user || !challenge) return;
+    if (!challenge) return;
 
     try {
       const progress: Partial<DailyChallengeProgress> = {
@@ -243,11 +237,10 @@ int main() {
         solvedAt: new Date().toISOString()
       };
 
-      await dailyChallengeService.updateChallengeProgress(user.id, today, progress);
+      await dailyChallengeService.updateChallengeProgress(today, progress);
       
       // Update local state
       const newProgress: DailyChallengeProgress = {
-        userId: user.id,
         challengeDate: today,
         ...progress
       } as DailyChallengeProgress;
@@ -257,7 +250,7 @@ int main() {
       toast.success('Congratulations! Daily challenge completed!');
 
       // Reload streak
-      const newStreak = await dailyChallengeService.getUserDailyStreak(user.id);
+      const newStreak = await dailyChallengeService.getUserDailyStreak();
       setUserStreak(newStreak);
     } catch (err) {
       console.error('Failed to update progress:', err);
@@ -352,13 +345,24 @@ int main() {
   };
 
   const saveProgressHandler = async (runtimeMs?: number) => {
-    if (!user || !challenge) {
-      console.error('Cannot save progress: user or challenge is missing');
+    if (!challenge) {
+      console.error('Cannot save progress: challenge is missing');
       return;
     }
 
-    // This would integrate with your progress storage system
-    console.log('Saving progress:', { userId: user.id, challengeId: challenge.id, runtimeMs });
+    try {
+      // Save progress using local storage
+      await dailyChallengeService.updateChallengeProgress(today, {
+        isCompleted: true,
+        solvedAt: new Date().toISOString(),
+        runtimeMs,
+        language: selectedLanguage
+      });
+      
+      console.log('Saving progress:', { challengeId: challenge.id, runtimeMs });
+    } catch (error) {
+      console.error('Failed to save progress:', error);
+    }
   };
 
   const saveDraft = useCallback(() => {

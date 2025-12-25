@@ -115,10 +115,10 @@ export default function Dashboard() {
     try {
       const [challenge, hasSolvedToday, streak, stats, history] = await Promise.all([
         dailyChallengeService.getTodayChallenge(),
-        dailyChallengeService.hasUserSolvedToday(user.id),
-        dailyChallengeService.getUserDailyStreak(user.id),
-        dailyChallengeService.getUserChallengeStats(user.id),
-        dailyChallengeService.getUserChallengeHistory(user.id, 7) // Last 7 challenges
+        dailyChallengeService.hasUserSolvedToday(),
+        dailyChallengeService.getUserDailyStreak(),
+        dailyChallengeService.getUserChallengeStats(),
+        dailyChallengeService.getChallengeHistory(7) // Last 7 challenges
       ]);
 
       setTodayChallenge(challenge);
