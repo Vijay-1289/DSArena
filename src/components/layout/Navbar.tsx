@@ -60,6 +60,12 @@ export function Navbar() {
                   Daily Challenge
                 </Button>
               </Link>
+              <Link to="/practice-problems">
+                <Button variant="ghost" size="sm">
+                  <Code className="mr-2 h-4 w-4" />
+                  Practice
+                </Button>
+              </Link>
               <Link to="/dashboard">
                 <Button variant="ghost" size="sm">
                   <LayoutDashboard className="mr-2 h-4 w-4" />

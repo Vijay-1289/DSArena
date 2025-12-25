@@ -15,6 +15,8 @@ import PythonTrack from "./pages/PythonTrack";
 import LearningTracks from "./pages/LearningTracks";
 import LanguageTrackPage from "./pages/LanguageTrackPage";
 import DailyChallenge from "./pages/DailyChallenge";
+import PracticeProblemsIndex from "./pages/PracticeProblemsIndex";
+import PracticeProblems from "./pages/PracticeProblems";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
             <Route path="/learning-tracks" element={<ProtectedRoute><LearningTracks /></ProtectedRoute>} />
             <Route path="/problem/:slug" element={<ProtectedRoute><ProblemDetail /></ProtectedRoute>} />
             <Route path="/daily-challenge" element={<ProtectedRoute><DailyChallenge /></ProtectedRoute>} />
+            <Route path="/practice-problems" element={<ProtectedRoute><PracticeProblemsIndex /></ProtectedRoute>} />
+            <Route path="/practice-problems/:slug" element={<ProtectedRoute><PracticeProblems /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
