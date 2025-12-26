@@ -1,11 +1,5 @@
-// AI Story Generation Service using Google Generative AI
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const API_KEY = 'AIzaSyALrlxecmAarC-gYt3FNeFVA8XvTkHMGk0';
-const MODEL_NAME = 'gemini-3-flash-preview';
-
-// Initialize the Google Generative AI
-const genAI = new GoogleGenerativeAI(API_KEY);
+// AI Story Generation Service using Supabase Edge Function
+import { supabase } from '@/integrations/supabase/client';
 
 export interface StoryGenerationOptions {
   problemTitle: string;
@@ -63,21 +57,40 @@ class AIStoryGenerator {
 
   private async performGeneration(cacheKey: string, options: StoryGenerationOptions): Promise<StoryResult> {
     try {
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+      const { data, error } = await supabase.functions.invoke('generate-story', {
+        body: {
+          problemTitle: options.problemTitle,
+          problemDescription: options.problemDescription,
+          difficulty: options.difficulty,
+          category: options.category,
+          language: options.language || 'python',
+        },
+      });
 
-      const prompt = this.buildPrompt(options);
-      
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
-      if (!text || text.trim().length === 0) {
-        throw new Error('Empty response from AI');
+      if (error) {
+        console.error('Story generation failed:', error);
+        return {
+          success: false,
+          error: error.message || 'Failed to generate story',
+        };
       }
 
-      // Clean and format the response
-      const story = this.cleanResponse(text);
-      
+      if (data?.error) {
+        return {
+          success: false,
+          error: data.error,
+        };
+      }
+
+      const story = data?.story;
+
+      if (!story || story.trim().length === 0) {
+        return {
+          success: false,
+          error: 'Empty response from AI',
+        };
+      }
+
       // Cache the result
       this.cache.set(cacheKey, story);
       
@@ -96,50 +109,6 @@ class AIStoryGenerator {
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
     }
-  }
-
-  private buildPrompt(options: StoryGenerationOptions): string {
-    const { problemTitle, problemDescription, difficulty, category } = options;
-    
-    return `
-Create a story-based explanation for the following coding problem. The story should help learners understand the problem in a real-world context without using emojis or special characters.
-
-Problem Title: ${problemTitle}
-Difficulty: ${difficulty}
-Category: ${category}
-
-Original Problem Description:
-${problemDescription}
-
-Please create a narrative that:
-1. Sets up a realistic scenario where this problem naturally occurs
-2. Explains the challenge in an intuitive, relatable way
-3. Uses characters or situations that make the concept memorable
-4. Connects the story context to the technical problem
-5. Maintains educational value while being engaging
-
-Make it suitable for ${difficulty} level and ensure the story helps learners understand WHY this problem exists, not just HOW to solve it.
-
-Format the response as a cohesive narrative. Keep it concise (2-3 paragraphs max) and focus purely on the storytelling without emojis, special symbols, or decorative elements.
-`;
-  }
-
-  private cleanResponse(text: string): string {
-    // Remove markdown formatting and clean up the response
-    let cleaned = text
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markdown
-      .replace(/\*(.*?)\*/g, '$1') // Remove italic markdown
-      .replace(/`(.*?)`/g, '$1') // Remove code markdown
-      .replace(/#{1,6}\s/g, '') // Remove header markdown
-      .replace(/\n\s*\n/g, '\n\n') // Normalize line breaks
-      .trim();
-
-    // Ensure it ends properly
-    if (!cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
-      cleaned += '.';
-    }
-
-    return cleaned;
   }
 
   private storeInLocalStorage(cacheKey: string, story: string): void {
