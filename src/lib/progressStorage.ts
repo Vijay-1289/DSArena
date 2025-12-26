@@ -5,6 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 let solvedProblemsCache: { [userId: string]: { problems: Set<string>; lastFetched: number } } = {};
 const CACHE_TTL = 30000; // 30 seconds cache
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Check if a string is a valid UUID
+function isValidUUID(id: string): boolean {
+  return UUID_REGEX.test(id);
+}
+
 // Fetch solved problems from Supabase (primary source of truth)
 export async function fetchSolvedProblems(userId: string): Promise<Set<string>> {
   try {
@@ -53,6 +61,19 @@ export async function saveProgress(
   runtimeMs?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Skip Supabase save for non-UUID problem IDs (local practice problems)
+    // but still update local cache for UI consistency
+    if (!isValidUUID(problemId)) {
+      console.log('Skipping Supabase save for non-UUID problem:', problemId);
+      // Update cache immediately for local problems
+      if (!solvedProblemsCache[userId]) {
+        solvedProblemsCache[userId] = { problems: new Set(), lastFetched: Date.now() };
+      }
+      solvedProblemsCache[userId].problems.add(problemId);
+      solvedProblemsCache[userId].lastFetched = Date.now();
+      return { success: true };
+    }
+
     // Check if already solved in DB
     const { data: existing, error: checkError } = await supabase
       .from('user_solved')
