@@ -182,7 +182,8 @@ export type Database = {
           id: string
           is_accepted: boolean | null
           memory_kb: number | null
-          problem_id: string
+          problem_id: string | null
+          problem_slug: string | null
           runtime_ms: number | null
           status: Database["public"]["Enums"]["submission_status"] | null
           tests_passed: number | null
@@ -196,7 +197,8 @@ export type Database = {
           id?: string
           is_accepted?: boolean | null
           memory_kb?: number | null
-          problem_id: string
+          problem_id?: string | null
+          problem_slug?: string | null
           runtime_ms?: number | null
           status?: Database["public"]["Enums"]["submission_status"] | null
           tests_passed?: number | null
@@ -210,7 +212,8 @@ export type Database = {
           id?: string
           is_accepted?: boolean | null
           memory_kb?: number | null
-          problem_id?: string
+          problem_id?: string | null
+          problem_slug?: string | null
           runtime_ms?: number | null
           status?: Database["public"]["Enums"]["submission_status"] | null
           tests_passed?: number | null
@@ -321,7 +324,8 @@ export type Database = {
           first_solved_at: string | null
           id: string
           last_attempt_at: string | null
-          problem_id: string
+          problem_id: string | null
+          problem_slug: string | null
           user_id: string
         }
         Insert: {
@@ -331,7 +335,8 @@ export type Database = {
           first_solved_at?: string | null
           id?: string
           last_attempt_at?: string | null
-          problem_id: string
+          problem_id?: string | null
+          problem_slug?: string | null
           user_id: string
         }
         Update: {
@@ -341,7 +346,8 @@ export type Database = {
           first_solved_at?: string | null
           id?: string
           last_attempt_at?: string | null
-          problem_id?: string
+          problem_id?: string | null
+          problem_slug?: string | null
           user_id?: string
         }
         Relationships: [
