@@ -1,24 +1,24 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Award, Star } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Download } from 'lucide-react';
 
 interface CompletionCertificateProps {
-  userName: string;
   completionDate: string;
   trackName: string;
   totalProblems: number;
 }
 
 export function CompletionCertificate({
-  userName,
   completionDate,
   trackName,
   totalProblems,
 }: CompletionCertificateProps) {
   const certificateRef = useRef<HTMLDivElement>(null);
+  const [userName, setUserName] = useState('');
+  const [isNameConfirmed, setIsNameConfirmed] = useState(false);
 
   const downloadCertificate = () => {
-    // Create a canvas from the certificate
     const certificate = certificateRef.current;
     if (!certificate) return;
 
@@ -35,100 +35,188 @@ export function CompletionCertificate({
     });
   };
 
+  // Name input form
+  if (!isNameConfirmed) {
+    return (
+      <div className="flex flex-col items-center gap-6 p-8">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground mb-2">Enter Your Name</h2>
+          <p className="text-muted-foreground text-sm">
+            This name will appear on your certificate
+          </p>
+        </div>
+        
+        <div className="w-full max-w-sm space-y-4">
+          <Input
+            type="text"
+            placeholder="Your Full Name"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            className="text-center text-lg"
+            autoFocus
+          />
+          
+          <Button 
+            onClick={() => setIsNameConfirmed(true)}
+            disabled={!userName.trim()}
+            className="w-full"
+          >
+            Generate Certificate
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center gap-6">
       {/* Certificate */}
       <div
         ref={certificateRef}
-        className="relative w-full max-w-2xl aspect-[1.4/1] rounded-2xl p-8 overflow-hidden"
+        className="relative w-full max-w-2xl aspect-[1.4/1] rounded-sm overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, hsl(var(--primary)/0.1) 0%, hsl(var(--background)) 50%, hsl(var(--accent)/0.1) 100%)',
-          border: '3px solid hsl(var(--primary))',
-          boxShadow: '0 0 40px hsl(var(--primary)/0.3), inset 0 0 60px hsl(var(--primary)/0.05)',
+          background: 'linear-gradient(135deg, #f5f5f0 0%, #f0ebe3 50%, #e8e4dc 100%)',
+          fontFamily: 'Georgia, serif',
         }}
       >
-        {/* Decorative elements */}
-        <div className="absolute top-4 left-4">
-          <Star className="w-6 h-6 text-primary animate-pulse" fill="currentColor" />
-        </div>
-        <div className="absolute top-4 right-4">
-          <Star className="w-6 h-6 text-primary animate-pulse" fill="currentColor" />
-        </div>
-        <div className="absolute bottom-4 left-4">
-          <Star className="w-6 h-6 text-primary animate-pulse" fill="currentColor" />
-        </div>
-        <div className="absolute bottom-4 right-4">
-          <Star className="w-6 h-6 text-primary animate-pulse" fill="currentColor" />
-        </div>
+        {/* Decorative floral pattern on right side */}
+        <div 
+          className="absolute right-0 top-0 bottom-0 w-1/3 opacity-20"
+          style={{
+            background: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 400'%3E%3Cpath d='M150 50 Q180 80 160 120 Q140 160 170 200 Q200 240 160 280 Q120 320 150 360' stroke='%23364e68' fill='none' stroke-width='2'/%3E%3Cpath d='M120 30 Q150 60 130 100 Q110 140 140 180 Q170 220 130 260 Q90 300 120 340' stroke='%23364e68' fill='none' stroke-width='1.5'/%3E%3Ccircle cx='140' cy='70' r='8' fill='none' stroke='%23364e68'/%3E%3Ccircle cx='155' cy='150' r='6' fill='none' stroke='%23364e68'/%3E%3Ccircle cx='125' cy='220' r='10' fill='none' stroke='%23364e68'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'repeat-y',
+            backgroundPosition: 'right center',
+          }}
+        />
 
-        {/* Corner decorations */}
-        <div className="absolute top-0 left-0 w-24 h-24 border-t-4 border-l-4 border-primary/50 rounded-tl-2xl" />
-        <div className="absolute top-0 right-0 w-24 h-24 border-t-4 border-r-4 border-primary/50 rounded-tr-2xl" />
-        <div className="absolute bottom-0 left-0 w-24 h-24 border-b-4 border-l-4 border-primary/50 rounded-bl-2xl" />
-        <div className="absolute bottom-0 right-0 w-24 h-24 border-b-4 border-r-4 border-primary/50 rounded-br-2xl" />
+        {/* Ribbon/Medal decoration */}
+        <div className="absolute right-8 top-4">
+          <div className="relative">
+            {/* Ribbon tails */}
+            <div 
+              className="absolute top-8 left-1/2 -translate-x-1/2 w-0 h-0"
+              style={{
+                borderLeft: '20px solid transparent',
+                borderRight: '20px solid transparent',
+                borderTop: '40px solid #364e68',
+              }}
+            />
+            {/* Medal circle */}
+            <div 
+              className="relative w-16 h-16 rounded-full border-4 flex items-center justify-center z-10"
+              style={{
+                background: 'linear-gradient(135deg, #e8e4dc 0%, #c9c5bd 100%)',
+                borderColor: '#a0998e',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              }}
+            >
+              <div 
+                className="w-10 h-10 rounded-full"
+                style={{
+                  background: 'linear-gradient(135deg, #f5f5f0 0%, #d4d0c8 100%)',
+                }}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center">
-          {/* Logo/Badge */}
+        <div className="relative z-10 flex flex-col h-full p-8 sm:p-10">
+          {/* Title */}
+          <div className="mb-6">
+            <h1 
+              className="text-4xl sm:text-5xl font-bold tracking-wide"
+              style={{ 
+                color: '#364e68',
+                fontFamily: 'Georgia, serif',
+                letterSpacing: '0.1em',
+              }}
+            >
+              CERTIFICATE
+            </h1>
+            <p 
+              className="text-lg sm:text-xl tracking-[0.3em] mt-1"
+              style={{ color: '#364e68' }}
+            >
+              OF COMPLETION
+            </p>
+          </div>
+
+          {/* Award text */}
+          <p 
+            className="text-sm tracking-[0.2em] mb-8"
+            style={{ color: '#364e68' }}
+          >
+            THE FOLLOWING AWARD IS GIVEN TO
+          </p>
+
+          {/* Name section */}
           <div className="mb-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-              <Award className="w-8 h-8 text-primary-foreground" />
+            <div 
+              className="border-b-2 pb-2 inline-block min-w-[280px]"
+              style={{ borderColor: '#364e68' }}
+            >
+              <p 
+                className="text-xl sm:text-2xl font-medium"
+                style={{ 
+                  color: '#2a3a4a',
+                  fontFamily: 'Georgia, serif',
+                }}
+              >
+                This certificate is given to <span className="font-bold">{userName}</span>
+              </p>
             </div>
           </div>
 
-          {/* Title */}
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">
-            Certificate of Completion
-          </h1>
-
-          <p className="text-muted-foreground text-sm mb-4">This is to certify that</p>
-
-          {/* Name */}
-          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3 font-mono">
-            {userName}
-          </h2>
-
-          <p className="text-muted-foreground text-sm mb-2">has successfully completed</p>
-
-          {/* Track Name */}
-          <div className="bg-primary/10 border border-primary/30 rounded-lg px-6 py-2 mb-3">
-            <h3 className="text-xl md:text-2xl font-bold text-primary">
-              {trackName}
-            </h3>
-          </div>
-
-          {/* Problems count */}
-          <p className="text-muted-foreground text-sm mb-4">
-            Solving all <span className="text-primary font-bold">{totalProblems}</span> coding challenges
+          {/* Achievement text */}
+          <p 
+            className="text-sm max-w-md mb-auto"
+            style={{ color: '#4a5568' }}
+          >
+            for successfully completing the <strong>{trackName}</strong> with all {totalProblems} coding challenges, 
+            demonstrating exceptional proficiency and dedication in the field of programming.
           </p>
 
-          {/* Date */}
-          <div className="mt-auto pt-4 border-t border-border/50 w-full">
-            <p className="text-sm text-muted-foreground">
-              Completed on{' '}
-              <span className="text-foreground font-medium">{completionDate}</span>
+          {/* Signature section */}
+          <div className="mt-6">
+            <p 
+              className="text-3xl mb-1"
+              style={{ 
+                fontFamily: "'Brush Script MT', cursive",
+                color: '#2a3a4a',
+              }}
+            >
+              S.Vijay
             </p>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-              <span className="text-primary">🏆</span> DSArena <span className="text-primary">🏆</span>
+            <p 
+              className="text-sm"
+              style={{ color: '#364e68' }}
+            >
+              Founder, DSArena
+            </p>
+            <p 
+              className="text-xs mt-2"
+              style={{ color: '#6b7280' }}
+            >
+              {completionDate}
             </p>
           </div>
         </div>
-
-        {/* Subtle pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-5 pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, hsl(var(--primary)) 1px, transparent 0)`,
-            backgroundSize: '20px 20px',
-          }}
-        />
       </div>
 
-      {/* Download Button */}
-      <Button onClick={downloadCertificate} className="gap-2">
-        <Download className="w-4 h-4" />
-        Download Certificate
-      </Button>
+      {/* Actions */}
+      <div className="flex gap-3">
+        <Button 
+          variant="outline" 
+          onClick={() => setIsNameConfirmed(false)}
+        >
+          Edit Name
+        </Button>
+        <Button onClick={downloadCertificate} className="gap-2">
+          <Download className="w-4 h-4" />
+          Download Certificate
+        </Button>
+      </div>
     </div>
   );
 }
