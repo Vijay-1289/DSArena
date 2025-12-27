@@ -204,7 +204,6 @@ export default function PythonTrack() {
               </DialogTitle>
             </DialogHeader>
             <CompletionCertificate
-              userName={user?.email?.split('@')[0] || 'Coder'}
               completionDate={new Date().toLocaleDateString('en-US', { 
                 year: 'numeric', 
                 month: 'long', 
