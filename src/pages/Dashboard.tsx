@@ -72,6 +72,7 @@ interface TrackProgress {
 export default function Dashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { needsOnboarding, loading: onboardingLoading } = useOnboardingCheck();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -89,11 +90,20 @@ export default function Dashboard() {
   });
   const [challengeHistory, setChallengeHistory] = useState<any[]>([]);
   const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
+  
+  // Redirect to auth if not logged in
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!onboardingLoading && needsOnboarding && user) {
+      navigate('/onboarding');
+    }
+  }, [needsOnboarding, onboardingLoading, user, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -150,7 +160,7 @@ export default function Dashboard() {
     setLoading(false);
   };
 
-  if (authLoading || loading) {
+  if (authLoading || loading || onboardingLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
