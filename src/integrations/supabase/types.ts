@@ -82,6 +82,7 @@ export type Database = {
           code: string
           id: string
           problem_id: string
+          problem_slug: string | null
           updated_at: string | null
           user_id: string
         }
@@ -89,6 +90,7 @@ export type Database = {
           code: string
           id?: string
           problem_id: string
+          problem_slug?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -96,18 +98,11 @@ export type Database = {
           code?: string
           id?: string
           problem_id?: string
+          problem_slug?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "drafts_problem_id_fkey"
-            columns: ["problem_id"]
-            isOneToOne: false
-            referencedRelation: "problems"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       leaderboard_achievements: {
         Row: {
