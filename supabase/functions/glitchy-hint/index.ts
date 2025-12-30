@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -13,16 +14,16 @@ serve(async (req) => {
   try {
     const { code, problem, language, error } = await req.json();
     
-    console.log("Generating Glitchy hint using Lovable AI...");
+    console.log("Generating Glitchy hint using OpenAI...");
     console.log("Language:", language);
     console.log("Has error:", !!error);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const OPENAI_API_KEY = Deno.env.get('OPEN_AI_API');
     
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    if (!OPENAI_API_KEY) {
+      console.error("OPEN_AI_API not configured");
       return new Response(JSON.stringify({ 
-        hint: "DUDE! I need my brain configured first. Lovable AI key is missing!",
+        hint: "DUDE! I need my brain configured first. OpenAI API key is missing!",
         mood: "sleepy"
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -49,15 +50,14 @@ Respond as Glitchy! Keep it short and helpful.`;
       ? `There's an error in this code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nError: ${error}\n\nGive me a hint about what's wrong!`
       : `I'm working on this code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nAny tips or hints for me?`;
 
-    // Use Lovable AI Gateway
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage }
@@ -69,7 +69,7 @@ Respond as Glitchy! Keep it short and helpful.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Lovable AI error:", response.status, errorText);
+      console.error("OpenAI error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
@@ -80,20 +80,20 @@ Respond as Glitchy! Keep it short and helpful.`;
         });
       }
       
-      if (response.status === 402) {
+      if (response.status === 401) {
         return new Response(JSON.stringify({ 
-          hint: "DUDE! My brain needs some fuel (credits). Ask the admin to top up Lovable AI credits!",
+          hint: "DUDE! My brain key isn't working. Check the OpenAI API key!",
           mood: "sleepy"
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       
-      throw new Error(`Lovable AI error: ${response.status}`);
+      throw new Error(`OpenAI error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log("Lovable AI response received");
+    console.log("OpenAI response received");
     
     const hint = data.choices?.[0]?.message?.content || "Hmm, let me think about this... *scratches head*";
 
@@ -119,7 +119,7 @@ Respond as Glitchy! Keep it short and helpful.`;
       mood: "sleepy",
       error: error instanceof Error ? error.message : "Unknown error"
     }), {
-      status: 200, // Return 200 so the cat still shows something friendly
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
