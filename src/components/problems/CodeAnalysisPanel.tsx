@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Lightbulb, Zap, AlertTriangle, Loader2, CheckCircle } from 'lucide-react';
@@ -27,6 +27,20 @@ interface AnalysisResult {
   hint: string | null;
 }
 
+// Count meaningful lines of code (excluding comments and empty lines)
+const countMeaningfulLines = (code: string): number => {
+  return code.split('\n').filter(l => {
+    const trimmed = l.trim();
+    return trimmed && 
+      !trimmed.startsWith('#') && 
+      !trimmed.startsWith('//') &&
+      !trimmed.startsWith('/*') &&
+      !trimmed.startsWith('*') &&
+      !trimmed.startsWith('"""') &&
+      !trimmed.startsWith("'''");
+  }).length;
+};
+
 export function CodeAnalysisPanel({
   code,
   language,
@@ -38,90 +52,144 @@ export function CodeAnalysisPanel({
 }: CodeAnalysisPanelProps) {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [lastAnalyzedCode, setLastAnalyzedCode] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const lastAnalyzedCodeRef = useRef<string>('');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Debounced code analysis
+  // Analyze code function
+  const analyzeCode = useCallback(async (codeToAnalyze: string) => {
+    // Cancel any pending request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const meaningfulLines = countMeaningfulLines(codeToAnalyze);
+    
+    // Need at least 5 meaningful lines
+    if (meaningfulLines < 5) {
+      console.log('CodeAnalysisPanel: Not enough meaningful lines:', meaningfulLines);
+      setAnalysis(null);
+      setLoading(false);
+      return;
+    }
+
+    // Skip if same code was already analyzed
+    if (codeToAnalyze === lastAnalyzedCodeRef.current) {
+      console.log('CodeAnalysisPanel: Code unchanged, skipping');
+      return;
+    }
+
+    console.log('CodeAnalysisPanel: Starting analysis for', problemSlug, 'with', meaningfulLines, 'lines');
+    setLoading(true);
+    setError(null);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke('analyze-code', {
+        body: {
+          code: codeToAnalyze,
+          language,
+          problemSlug,
+          problemTitle,
+          problemDifficulty,
+          userHistory: {
+            attemptCount,
+            previousFailures: Math.max(0, attemptCount - 1),
+            avgSolveTime: 600,
+            topic: problemCategory,
+          },
+        },
+      });
+
+      if (controller.signal.aborted) {
+        console.log('CodeAnalysisPanel: Request was aborted');
+        return;
+      }
+
+      if (fnError) {
+        console.error('CodeAnalysisPanel: Function error:', fnError);
+        setError('Analysis failed');
+        setAnalysis(null);
+      } else if (data) {
+        console.log('CodeAnalysisPanel: Analysis complete:', data);
+        setAnalysis(data);
+        lastAnalyzedCodeRef.current = codeToAnalyze;
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        console.error('CodeAnalysisPanel: Unexpected error:', err);
+        setError('Analysis failed');
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [language, problemSlug, problemTitle, problemDifficulty, problemCategory, attemptCount]);
+
+  // Debounced effect to trigger analysis
   useEffect(() => {
     // Clear previous timeout
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
 
-    // Skip if code hasn't changed meaningfully
-    const codeLines = code.split('\n').filter(l => 
-      l.trim() && 
-      !l.trim().startsWith('#') && 
-      !l.trim().startsWith('//') &&
-      !l.trim().startsWith('/*') &&
-      !l.trim().startsWith('*')
-    );
+    const meaningfulLines = countMeaningfulLines(code);
     
-    // Need at least 5 meaningful lines of code to analyze
-    if (codeLines.length < 5) {
+    // Not enough code yet
+    if (meaningfulLines < 5) {
       setAnalysis(null);
+      setLoading(false);
       return;
     }
 
-    // Skip if code is same as last analyzed
-    if (code === lastAnalyzedCode) {
+    // Already analyzed this exact code
+    if (code === lastAnalyzedCodeRef.current) {
       return;
     }
 
-    // Debounce analysis by 1.5 seconds
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke('analyze-code', {
-          body: {
-            code,
-            language,
-            problemSlug,
-            problemTitle,
-            problemDifficulty,
-            userHistory: {
-              attemptCount,
-              previousFailures: Math.max(0, attemptCount - 1),
-              avgSolveTime: 600,
-              topic: problemCategory,
-            },
-          },
-        });
+    // Show loading immediately for feedback
+    setLoading(true);
 
-        if (!error && data) {
-          setAnalysis(data);
-          setLastAnalyzedCode(code);
-        }
-      } catch (err) {
-        console.error('Code analysis failed:', err);
-      } finally {
-        setLoading(false);
-      }
-    }, 1500);
+    // Debounce actual analysis by 2 seconds for stable typing
+    debounceRef.current = setTimeout(() => {
+      analyzeCode(code);
+    }, 2000);
 
     return () => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [code, language, problemSlug, problemTitle, problemDifficulty, problemCategory, attemptCount, lastAnalyzedCode]);
+  }, [code, analyzeCode]);
 
   // Reset when problem changes
   useEffect(() => {
     setAnalysis(null);
-    setLastAnalyzedCode('');
+    lastAnalyzedCodeRef.current = '';
+    setError(null);
+    setLoading(false);
   }, [problemSlug]);
 
-  // Show nothing if no meaningful code yet
-  const codeLines = code.split('\n').filter(l => 
-    l.trim() && 
-    !l.trim().startsWith('#') && 
-    !l.trim().startsWith('//') &&
-    !l.trim().startsWith('/*') &&
-    !l.trim().startsWith('*')
-  );
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
-  if (codeLines.length < 5 && !loading) {
+  const meaningfulLines = countMeaningfulLines(code);
+
+  // Show prompt when not enough code
+  if (meaningfulLines < 5 && !loading) {
     return (
       <Card className="border border-border/50 bg-card/50">
         <CardHeader className="pb-2 pt-3 px-3">
@@ -146,12 +214,31 @@ export function CodeAnalysisPanel({
         <CardHeader className="pb-2 pt-3 px-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Analyzing...
+            Analyzing your code...
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
           <p className="text-xs text-muted-foreground">
-            Checking your code for potential improvements...
+            Checking for potential improvements...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card className="border border-border/50 bg-card/50">
+        <CardHeader className="pb-2 pt-3 px-3">
+          <CardTitle className="text-sm flex items-center gap-2 text-muted-foreground">
+            <AlertTriangle className="h-4 w-4" />
+            Analysis Unavailable
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-3">
+          <p className="text-xs text-muted-foreground">
+            Couldn't analyze your code right now. Keep coding!
           </p>
         </CardContent>
       </Card>
