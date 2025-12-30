@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { dynamicLearningService } from '@/lib/dynamicLearningService';
 import { cn } from '@/lib/utils';
 import {
   BookOpen,
@@ -15,7 +16,11 @@ import {
   Sparkles,
   Loader2,
   GraduationCap,
+  RefreshCw,
+  Target,
+  TrendingUp,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface LearningPlanItem {
   id: string;
@@ -41,6 +46,7 @@ export function LearningPlanPanel() {
   const [planItems, setPlanItems] = useState<LearningPlanItem[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -71,13 +77,44 @@ export function LearningPlanPanel() {
         .order('display_order', { ascending: true })
         .limit(10);
 
-      if (planData) {
+      if (planData && planData.length > 0) {
         setPlanItems(planData as LearningPlanItem[]);
+      } else if (prefData) {
+        // No plan exists, generate one dynamically
+        await refreshPlan();
       }
     } catch (error) {
       console.error('Failed to load learning plan:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshPlan = async () => {
+    if (!user) return;
+    
+    setRefreshing(true);
+    try {
+      const success = await dynamicLearningService.updateLearningPlan(user.id);
+      if (success) {
+        // Reload the plan
+        const { data: planData } = await supabase
+          .from('learning_plan')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('display_order', { ascending: true })
+          .limit(10);
+
+        if (planData) {
+          setPlanItems(planData as LearningPlanItem[]);
+          toast.success('Learning plan updated based on your progress!');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh plan:', error);
+      toast.error('Failed to update learning plan');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -113,6 +150,10 @@ export function LearningPlanPanel() {
   const progress = planItems.length > 0 ? (completedCount / planItems.length) * 100 : 0;
   const nextProblem = planItems.find(item => !item.is_completed);
 
+  // Group problems by reason/topic for better display
+  const strugglingProblems = planItems.filter(item => item.failed_attempts >= 2 && !item.is_completed);
+  const hasStruggles = strugglingProblems.length > 0;
+
   const getLevelBadgeColor = (level: string) => {
     switch (level) {
       case 'beginner':
@@ -144,15 +185,33 @@ export function LearningPlanPanel() {
             <BookOpen className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">Your Learning Plan</CardTitle>
           </div>
-          <Badge variant="outline" className={getLevelBadgeColor(preferences.recommended_level)}>
-            {preferences.recommended_level.charAt(0).toUpperCase() + preferences.recommended_level.slice(1)} Level
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshPlan}
+              disabled={refreshing}
+              className="h-8 px-2"
+              title="Update recommendations based on progress"
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+            </Button>
+            <Badge variant="outline" className={getLevelBadgeColor(preferences.recommended_level)}>
+              {preferences.recommended_level.charAt(0).toUpperCase() + preferences.recommended_level.slice(1)} Level
+            </Badge>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
           <span>{getTrackIcon(preferences.preferred_language)}</span>
           <span className="capitalize">{preferences.preferred_language} Track</span>
           <span className="text-muted-foreground/50">•</span>
           <span>{completedCount}/{planItems.length} completed</span>
+        </div>
+        
+        {/* Dynamic recommendations hint */}
+        <div className="flex items-center gap-2 text-xs text-primary mt-2 bg-primary/5 rounded-md px-2 py-1">
+          <TrendingUp className="h-3 w-3" />
+          <span>Plan updates based on your progress</span>
         </div>
       </CardHeader>
       <CardContent>
@@ -165,6 +224,19 @@ export function LearningPlanPanel() {
           <Progress value={progress} className="h-2" />
         </div>
 
+        {/* Struggling alert */}
+        {hasStruggles && (
+          <div className="mb-4 p-3 rounded-lg bg-warning/10 border border-warning/30">
+            <div className="flex items-center gap-2 text-warning text-sm font-medium">
+              <Target className="h-4 w-4" />
+              <span>Focus areas detected</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              We've noticed some challenges. Your plan now includes easier problems to build foundations.
+            </p>
+          </div>
+        )}
+
         {/* Problem list */}
         <div className="space-y-2 max-h-[280px] overflow-y-auto">
           {planItems.slice(0, 6).map((item, index) => (
@@ -174,7 +246,8 @@ export function LearningPlanPanel() {
               className={cn(
                 "flex items-center gap-3 p-3 rounded-lg border transition-all hover:bg-accent/50",
                 item.is_completed && "bg-success/10 border-success/30",
-                !item.is_completed && nextProblem?.id === item.id && "border-primary/50 bg-primary/5"
+                !item.is_completed && nextProblem?.id === item.id && "border-primary/50 bg-primary/5",
+                item.failed_attempts >= 2 && !item.is_completed && "border-warning/50 bg-warning/5"
               )}
             >
               <div className="flex-shrink-0">
@@ -204,9 +277,9 @@ export function LearningPlanPanel() {
               <Badge variant="outline" className={cn("text-xs", getLevelBadgeColor(item.level))}>
                 {item.level}
               </Badge>
-              {item.failed_attempts > 0 && (
+              {item.failed_attempts > 0 && !item.is_completed && (
                 <Badge variant="destructive" className="text-xs">
-                  {item.failed_attempts} failed
+                  {item.failed_attempts} retry
                 </Badge>
               )}
             </Link>
@@ -227,12 +300,25 @@ export function LearningPlanPanel() {
 
         {planItems.length === 0 && (
           <div className="text-center py-4 text-muted-foreground">
-            <p className="text-sm">No problems in your plan yet.</p>
-            <Link to={`/track/${preferences.preferred_language}-track`}>
-              <Button variant="link" className="mt-2">
-                Explore {preferences.preferred_language} problems
-              </Button>
-            </Link>
+            <p className="text-sm">Generating your personalized plan...</p>
+            <Button 
+              variant="outline" 
+              className="mt-2" 
+              onClick={refreshPlan}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Generate Plan
+                </>
+              )}
+            </Button>
           </div>
         )}
       </CardContent>
