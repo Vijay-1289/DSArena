@@ -19,6 +19,7 @@ import DailyChallenge from "./pages/DailyChallenge";
 import PracticeProblemsIndex from "./pages/PracticeProblemsIndex";
 import PracticeProblems from "./pages/PracticeProblems";
 import Videos from "./pages/Videos";
+import Exam from "./pages/Exam";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/practice-problems" element={<ProtectedRoute><PracticeProblemsIndex /></ProtectedRoute>} />
             <Route path="/practice-problems/:slug" element={<ProtectedRoute><PracticeProblems /></ProtectedRoute>} />
             <Route path="/videos" element={<ProtectedRoute><Videos /></ProtectedRoute>} />
+            <Route path="/exam" element={<ProtectedRoute><Exam /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
