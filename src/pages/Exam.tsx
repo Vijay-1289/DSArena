@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -136,10 +136,60 @@ export default function Exam() {
     }
   }, [heartsRemaining, sessionId, user]);
 
-  const handleDisqualify = useCallback(() => {
+  // Reference to exitFullscreen to avoid circular dependency
+  const exitFullscreenRef = useRef<() => void>(() => {});
+
+  // Handle disqualification - mark exam as failed due to violations
+  const handleDisqualify = useCallback(async () => {
     setWasDisqualified(true);
-    handleSubmit(true);
-  }, []);
+    setIsSubmitting(true);
+    
+    try {
+      if (sessionId && user) {
+        // Update session to disqualified
+        await supabase.from('exam_sessions').update({
+          status: 'disqualified',
+          completed_at: new Date().toISOString(),
+          time_spent_seconds: timeSpent,
+          auto_submitted: true,
+          passed: false,
+        }).eq('id', sessionId);
+
+        // Block user from retaking
+        const { data: existingEligibility } = await supabase
+          .from('exam_eligibility')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (existingEligibility) {
+          await supabase.from('exam_eligibility').update({
+            is_eligible: false,
+            last_exam_passed: false,
+            last_exam_session_id: sessionId,
+            blocked_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', user.id);
+        } else {
+          await supabase.from('exam_eligibility').insert({
+            user_id: user.id,
+            is_eligible: false,
+            last_exam_passed: false,
+            last_exam_session_id: sessionId,
+            blocked_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      exitFullscreenRef.current();
+      setExamState('results');
+    } catch (err) {
+      console.error('Disqualify error:', err);
+      toast.error('Failed to submit exam');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [sessionId, user, timeSpent]);
 
   const { enterFullscreen, exitFullscreen } = useExamSecurity({
     isActive: examState === 'active',
@@ -147,6 +197,11 @@ export default function Exam() {
     onViolation: handleViolation,
     onDisqualify: handleDisqualify,
   });
+
+  // Update ref when exitFullscreen changes
+  useEffect(() => {
+    exitFullscreenRef.current = exitFullscreen;
+  }, [exitFullscreen]);
 
   const handleStart = async (selectedLanguage: ExamLanguage) => {
     if (!user) {
