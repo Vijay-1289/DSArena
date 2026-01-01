@@ -49,7 +49,7 @@ export default function Exam() {
     if (!user) return;
     
     try {
-      // Check if user has failed an exam and is blocked
+      // Check if user has failed an exam and is blocked via exam_eligibility
       const { data: eligibility } = await supabase
         .from('exam_eligibility')
         .select('*')
@@ -57,6 +57,30 @@ export default function Exam() {
         .maybeSingle();
 
       if (eligibility && !eligibility.is_eligible) {
+        setBlockReason('You failed the previous exam. Please wait for admin approval to retake.');
+        setExamState('blocked');
+        return;
+      }
+
+      // Also check for any failed/disqualified session without eligibility record
+      const { data: failedSession } = await supabase
+        .from('exam_sessions')
+        .select('id, status, passed')
+        .eq('user_id', user.id)
+        .or('status.eq.disqualified,and(status.eq.completed,passed.eq.false)')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (failedSession && !eligibility) {
+        // User failed but no eligibility record exists - block them
+        await supabase.from('exam_eligibility').insert({
+          user_id: user.id,
+          is_eligible: false,
+          last_exam_passed: false,
+          last_exam_session_id: failedSession.id,
+          blocked_at: new Date().toISOString(),
+        });
         setBlockReason('You failed the previous exam. Please wait for admin approval to retake.');
         setExamState('blocked');
         return;
@@ -71,6 +95,27 @@ export default function Exam() {
         .maybeSingle();
 
       if (activeSession) {
+        // Check if session should be marked as disqualified (0 hearts)
+        if (activeSession.hearts_remaining <= 0) {
+          await supabase.from('exam_sessions').update({
+            status: 'disqualified',
+            passed: false,
+            completed_at: new Date().toISOString(),
+          }).eq('id', activeSession.id);
+          
+          await supabase.from('exam_eligibility').upsert({
+            user_id: user.id,
+            is_eligible: false,
+            last_exam_passed: false,
+            last_exam_session_id: activeSession.id,
+            blocked_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
+          
+          setBlockReason('You were disqualified from the previous exam. Please wait for admin approval to retake.');
+          setExamState('blocked');
+          return;
+        }
+
         // Resume the active session
         setSessionId(activeSession.id);
         setLanguage(activeSession.language as ExamLanguage);
@@ -96,6 +141,11 @@ export default function Exam() {
       setAnswers(Object.fromEntries(selectedQuestions.map((q, i) => [i, q.starterCode])));
       setQuestionStatuses(new Array(3).fill('unanswered'));
       setExamState('active');
+      
+      // Enter fullscreen when resuming exam
+      setTimeout(() => {
+        enterFullscreen();
+      }, 100);
     } catch (err) {
       console.error('Failed to resume exam:', err);
       setExamState('start');
