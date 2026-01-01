@@ -48,6 +48,7 @@ export function useExamSecurity({
   }, []);
 
   // Handle fullscreen change
+  // Aggressive fullscreen enforcement - re-enter within 100ms
   useEffect(() => {
     if (!isActive) return;
 
@@ -59,13 +60,13 @@ export function useExamSecurity({
         onViolation('fullscreen_exit');
         toast.error('⚠️ Warning: Fullscreen exited!', {
           description: `You lost a heart. ${heartsRemaining - 1} hearts remaining.`,
-          duration: 5000,
+          duration: 3000,
         });
         
-        // Try to re-enter fullscreen
+        // Immediately try to re-enter fullscreen (100ms delay for browser to allow)
         setTimeout(() => {
           enterFullscreen();
-        }, 1000);
+        }, 100);
       }
     };
 
@@ -77,6 +78,19 @@ export function useExamSecurity({
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, [isActive, heartsRemaining, onViolation, enterFullscreen]);
+
+  // Continuously check and enforce fullscreen while exam is active
+  useEffect(() => {
+    if (!isActive) return;
+
+    const enforceFullscreen = setInterval(() => {
+      if (!document.fullscreenElement && heartsRemaining > 0) {
+        enterFullscreen();
+      }
+    }, 500);
+
+    return () => clearInterval(enforceFullscreen);
+  }, [isActive, heartsRemaining, enterFullscreen]);
 
   // Handle visibility change (tab switch)
   useEffect(() => {
