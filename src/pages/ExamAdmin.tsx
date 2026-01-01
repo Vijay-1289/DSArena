@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle, XCircle, Clock, Users, Trophy, AlertTriangle, Unlock, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Users, Trophy, AlertTriangle, Unlock, RefreshCw, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatExamTime } from '@/lib/examUtils';
 
@@ -34,6 +34,25 @@ interface BlockedUser {
   display_name?: string | null;
   username?: string | null;
 }
+
+// Helper function to determine the actual exam result
+const getExamResult = (session: ExamSession): 'passed' | 'failed' | 'in_progress' | 'disqualified' => {
+  if (session.status === 'disqualified') return 'disqualified';
+  if (session.passed === true) return 'passed';
+  if (session.passed === false) return 'failed';
+  
+  // If status is still in_progress but hearts are 0, it's effectively disqualified
+  if (session.status === 'in_progress' && session.hearts_remaining === 0) {
+    return 'disqualified';
+  }
+  
+  // If status is completed but passed is null, treat as failed
+  if (session.status === 'completed' && session.passed === null) {
+    return 'failed';
+  }
+  
+  return 'in_progress';
+};
 
 export default function ExamAdmin() {
   const { user } = useAuth();
@@ -147,11 +166,14 @@ export default function ExamAdmin() {
 
         setSessions(sessionsWithProfiles);
         
-        // Calculate stats
+        // Calculate stats based on actual results
         const total = sessionsData.length;
-        const passed = sessionsData.filter(s => s.passed === true).length;
-        const failed = sessionsData.filter(s => s.passed === false || s.status === 'disqualified').length;
-        const inProgress = sessionsData.filter(s => s.status === 'in_progress').length;
+        const passed = sessionsWithProfiles.filter(s => getExamResult(s) === 'passed').length;
+        const failed = sessionsWithProfiles.filter(s => {
+          const result = getExamResult(s);
+          return result === 'failed' || result === 'disqualified';
+        }).length;
+        const inProgress = sessionsWithProfiles.filter(s => getExamResult(s) === 'in_progress').length;
         setStats({ total, passed, failed, inProgress });
       } else {
         setSessions([]);
@@ -213,6 +235,123 @@ export default function ExamAdmin() {
     }
   };
 
+  // Approve retake directly from the exam sessions table
+  const approveRetakeFromSession = async (userId: string) => {
+    try {
+      // Check if eligibility record exists
+      const { data: existingEligibility } = await supabase
+        .from('exam_eligibility')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingEligibility) {
+        // Update existing record
+        await supabase.from('exam_eligibility').update({
+          is_eligible: true,
+          unblocked_by: user?.id,
+          unblocked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('user_id', userId);
+      } else {
+        // Create new eligibility record
+        await supabase.from('exam_eligibility').insert({
+          user_id: userId,
+          is_eligible: true,
+          unblocked_by: user?.id,
+          unblocked_at: new Date().toISOString(),
+        });
+      }
+
+      toast.success('User approved for retake');
+      await loadData();
+    } catch (err) {
+      console.error('Error approving retake:', err);
+      toast.error('Failed to approve retake');
+    }
+  };
+
+  // Fix stale exam sessions (in_progress with 0 hearts)
+  const fixStaleSession = async (sessionId: string, userId: string) => {
+    try {
+      // Update the session to disqualified
+      await supabase.from('exam_sessions').update({
+        status: 'disqualified',
+        passed: false,
+        completed_at: new Date().toISOString(),
+      }).eq('id', sessionId);
+
+      // Create/update eligibility record to block retake
+      const { data: existingEligibility } = await supabase
+        .from('exam_eligibility')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingEligibility) {
+        await supabase.from('exam_eligibility').update({
+          is_eligible: false,
+          last_exam_passed: false,
+          last_exam_session_id: sessionId,
+          blocked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq('user_id', userId);
+      } else {
+        await supabase.from('exam_eligibility').insert({
+          user_id: userId,
+          is_eligible: false,
+          last_exam_passed: false,
+          last_exam_session_id: sessionId,
+          blocked_at: new Date().toISOString(),
+        });
+      }
+
+      toast.success('Session marked as disqualified');
+      await loadData();
+    } catch (err) {
+      console.error('Error fixing session:', err);
+      toast.error('Failed to update session');
+    }
+  };
+
+  const getResultBadge = (session: ExamSession) => {
+    const result = getExamResult(session);
+    switch (result) {
+      case 'passed':
+        return <Badge className="bg-green-500/20 text-green-500 border-green-500/30">Passed</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
+      case 'disqualified':
+        return <Badge variant="destructive" className="bg-red-600/20 text-red-400 border-red-600/30">Disqualified</Badge>;
+      case 'in_progress':
+        return <Badge variant="secondary">In Progress</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
+  const getStatusBadge = (session: ExamSession) => {
+    const result = getExamResult(session);
+    // Show actual status with correction note if needed
+    if (session.status === 'in_progress' && result === 'disqualified') {
+      return (
+        <div className="flex items-center gap-1">
+          <Badge variant="destructive">Stale</Badge>
+          <span className="text-xs text-muted-foreground">(needs fix)</span>
+        </div>
+      );
+    }
+    return (
+      <Badge variant={
+        session.status === 'completed' ? 'default' : 
+        session.status === 'disqualified' ? 'destructive' : 
+        'secondary'
+      }>
+        {session.status}
+      </Badge>
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -222,6 +361,12 @@ export default function ExamAdmin() {
   }
 
   if (!isAdmin) return null;
+
+  // Get failed users who need retake approval (from sessions, not just blocked list)
+  const failedSessions = sessions.filter(s => {
+    const result = getExamResult(s);
+    return result === 'failed' || result === 'disqualified';
+  });
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -282,6 +427,9 @@ export default function ExamAdmin() {
         <Tabs defaultValue="all">
           <TabsList>
             <TabsTrigger value="all">All Exams ({sessions.length})</TabsTrigger>
+            <TabsTrigger value="failed">
+              Failed/Disqualified ({failedSessions.length})
+            </TabsTrigger>
             <TabsTrigger value="blocked">
               Blocked Users ({blockedUsers.length})
             </TabsTrigger>
@@ -307,39 +455,127 @@ export default function ExamAdmin() {
                         <TableHead>Hearts</TableHead>
                         <TableHead>Violations</TableHead>
                         <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sessions.map((session) => (
-                        <TableRow key={session.id}>
-                          <TableCell className="font-medium">
-                            {session.display_name || session.username || session.user_id.slice(0, 8)}
-                          </TableCell>
-                          <TableCell className="capitalize">{session.language}</TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              session.status === 'completed' ? 'default' : 
-                              session.status === 'disqualified' ? 'destructive' : 
-                              'secondary'
-                            }>
-                              {session.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {session.passed === true && <CheckCircle className="h-5 w-5 text-green-500" />}
-                            {session.passed === false && <XCircle className="h-5 w-5 text-red-500" />}
-                            {session.passed === null && <Clock className="h-5 w-5 text-muted-foreground" />}
-                          </TableCell>
-                          <TableCell>
-                            {session.time_spent_seconds ? formatExamTime(session.time_spent_seconds) : '-'}
-                          </TableCell>
-                          <TableCell>{session.hearts_remaining}/3</TableCell>
-                          <TableCell>{session.total_violations}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(session.created_at).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {sessions.map((session) => {
+                        const result = getExamResult(session);
+                        const isStale = session.status === 'in_progress' && result === 'disqualified';
+                        
+                        return (
+                          <TableRow key={session.id}>
+                            <TableCell className="font-medium">
+                              {session.display_name || session.username || session.user_id.slice(0, 8)}
+                            </TableCell>
+                            <TableCell className="capitalize">{session.language}</TableCell>
+                            <TableCell>{getStatusBadge(session)}</TableCell>
+                            <TableCell>{getResultBadge(session)}</TableCell>
+                            <TableCell>
+                              {session.time_spent_seconds ? formatExamTime(session.time_spent_seconds) : '-'}
+                            </TableCell>
+                            <TableCell>{session.hearts_remaining}/3</TableCell>
+                            <TableCell>{session.total_violations}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(session.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {isStale && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => fixStaleSession(session.id, session.user_id)}
+                                  >
+                                    Fix Status
+                                  </Button>
+                                )}
+                                {(result === 'failed' || result === 'disqualified') && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="secondary"
+                                    onClick={() => approveRetakeFromSession(session.user_id)}
+                                  >
+                                    <RotateCcw className="h-3 w-3 mr-1" />
+                                    Allow Retake
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="failed">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  Failed & Disqualified Exams
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {failedSessions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">No failed exams</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Language</TableHead>
+                        <TableHead>Result</TableHead>
+                        <TableHead>Hearts Left</TableHead>
+                        <TableHead>Violations</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {failedSessions.map((session) => {
+                        const result = getExamResult(session);
+                        const isStale = session.status === 'in_progress' && result === 'disqualified';
+                        
+                        return (
+                          <TableRow key={session.id}>
+                            <TableCell className="font-medium">
+                              {session.display_name || session.username || session.user_id.slice(0, 8)}
+                            </TableCell>
+                            <TableCell className="capitalize">{session.language}</TableCell>
+                            <TableCell>{getResultBadge(session)}</TableCell>
+                            <TableCell>{session.hearts_remaining}/3</TableCell>
+                            <TableCell>{session.total_violations}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {new Date(session.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {isStale && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => fixStaleSession(session.id, session.user_id)}
+                                  >
+                                    Fix Status
+                                  </Button>
+                                )}
+                                <Button 
+                                  size="sm"
+                                  onClick={() => approveRetakeFromSession(session.user_id)}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Allow Retake
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -352,7 +588,7 @@ export default function ExamAdmin() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                  Users Awaiting Approval
+                  Blocked Users (Awaiting Approval)
                 </CardTitle>
               </CardHeader>
               <CardContent>
