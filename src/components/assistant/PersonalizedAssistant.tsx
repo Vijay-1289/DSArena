@@ -39,8 +39,8 @@ export function PersonalizedAssistant() {
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('');
 
-  // Don't show on auth, index, or problem detail pages
-  const hiddenPaths = ['/auth', '/problem/'];
+  // Don't show on auth, index, problem detail, or exam pages
+  const hiddenPaths = ['/auth', '/problem/', '/exam'];
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || location.pathname === '/';
 
   useEffect(() => {
