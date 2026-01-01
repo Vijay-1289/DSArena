@@ -205,30 +205,17 @@ export default function Exam() {
           passed: false,
         }).eq('id', sessionId);
 
-        // Block user from retaking
-        const { data: existingEligibility } = await supabase
-          .from('exam_eligibility')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Block user from retaking (user can only ever set is_eligible=false)
+        const { error: blockErr } = await supabase.from('exam_eligibility').upsert({
+          user_id: user.id,
+          is_eligible: false,
+          last_exam_passed: false,
+          last_exam_session_id: sessionId,
+          blocked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' });
 
-        if (existingEligibility) {
-          await supabase.from('exam_eligibility').update({
-            is_eligible: false,
-            last_exam_passed: false,
-            last_exam_session_id: sessionId,
-            blocked_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }).eq('user_id', user.id);
-        } else {
-          await supabase.from('exam_eligibility').insert({
-            user_id: user.id,
-            is_eligible: false,
-            last_exam_passed: false,
-            last_exam_session_id: sessionId,
-            blocked_at: new Date().toISOString(),
-          });
-        }
+        if (blockErr) throw blockErr;
       }
 
       exitFullscreenRef.current();
@@ -358,29 +345,16 @@ export default function Exam() {
 
         // Update eligibility - if failed, block from retaking
         if (!passed && user) {
-          const { data: existingEligibility } = await supabase
-            .from('exam_eligibility')
-            .select('id')
-            .eq('user_id', user.id)
-            .maybeSingle();
+          const { error: blockErr } = await supabase.from('exam_eligibility').upsert({
+            user_id: user.id,
+            is_eligible: false,
+            last_exam_passed: false,
+            last_exam_session_id: sessionId,
+            blocked_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' });
 
-          if (existingEligibility) {
-            await supabase.from('exam_eligibility').update({
-              is_eligible: false,
-              last_exam_passed: false,
-              last_exam_session_id: sessionId,
-              blocked_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }).eq('user_id', user.id);
-          } else {
-            await supabase.from('exam_eligibility').insert({
-              user_id: user.id,
-              is_eligible: false,
-              last_exam_passed: false,
-              last_exam_session_id: sessionId,
-              blocked_at: new Date().toISOString(),
-            });
-          }
+          if (blockErr) throw blockErr;
         }
       }
 
