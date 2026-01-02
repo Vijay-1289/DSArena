@@ -87,17 +87,15 @@ export function ExamCodeEditor({
     setConsoleOutput('');
 
     try {
-      // Combine visible and hidden test cases
+      // Combine visible and hidden test cases - use camelCase to match edge function
       const allTestCases = [
         ...testCases.map((tc) => ({
           input: tc.input,
-          expected_output: tc.expectedOutput,
-          is_visible: true,
+          expectedOutput: tc.expectedOutput,
         })),
         ...hiddenTestCases.map((tc) => ({
           input: tc.input,
-          expected_output: tc.expectedOutput,
-          is_visible: false,
+          expectedOutput: tc.expectedOutput,
         })),
       ];
 
