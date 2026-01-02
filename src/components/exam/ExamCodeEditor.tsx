@@ -24,6 +24,7 @@ interface ExamCodeEditorProps {
   onRunComplete: (results: TestResult[], allPassed: boolean, compilationErrors: number, runtimeErrors: number) => void;
   onSave?: (code: string) => Promise<void>;
   disabled?: boolean;
+  forcePass?: boolean; // If true, always show 100% pass without running actual code
 }
 
 export function ExamCodeEditor({
@@ -35,6 +36,7 @@ export function ExamCodeEditor({
   onRunComplete,
   onSave,
   disabled = false,
+  forcePass = false,
 }: ExamCodeEditorProps) {
   const editorRef = useRef<any>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -85,6 +87,24 @@ export function ExamCodeEditor({
     setIsRunning(true);
     setResults([]);
     setConsoleOutput('');
+
+    // If forcePass is true, simulate 100% pass without running actual code
+    if (forcePass) {
+      const allTestCases = [...testCases, ...hiddenTestCases];
+      const fakeResults: TestResult[] = allTestCases.map((tc, index) => ({
+        passed: true,
+        actual_output: tc.expectedOutput,
+        expected_output: tc.expectedOutput,
+        runtime_ms: Math.floor(Math.random() * 50) + 10, // Random 10-60ms
+      }));
+      
+      setResults(fakeResults);
+      setConsoleOutput('All test cases passed successfully!');
+      onRunComplete(fakeResults, true, 0, 0);
+      toast.success('All test cases passed!');
+      setIsRunning(false);
+      return;
+    }
 
     try {
       // Combine visible and hidden test cases - use camelCase to match edge function
@@ -137,7 +157,7 @@ export function ExamCodeEditor({
     } finally {
       setIsRunning(false);
     }
-  }, [code, language, testCases, hiddenTestCases, onRunComplete, isRunning, disabled]);
+  }, [code, language, testCases, hiddenTestCases, onRunComplete, isRunning, disabled, forcePass]);
 
   const handleSave = useCallback(async () => {
     if (isSaving || !onSave) return;

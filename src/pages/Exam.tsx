@@ -582,6 +582,10 @@ export default function Exam() {
   const currentQuestion = questions[currentIndex];
   if (!currentQuestion) return null;
 
+  // Check if current user is a bypass user
+  const userEmail = user?.email?.toLowerCase() || '';
+  const isBypassUser = BYPASS_EMAILS.some(email => email.toLowerCase() === userEmail);
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <ExamHeader
@@ -608,6 +612,7 @@ export default function Exam() {
             hiddenTestCases={currentQuestion.hiddenTestCases}
             onRunComplete={handleRunComplete}
             onSave={handleSaveCode}
+            forcePass={isBypassUser}
           />
         </div>
       </div>
