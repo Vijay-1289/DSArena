@@ -23,6 +23,12 @@ export function useExamSecurity({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const violationCountRef = useRef(0);
 
+  // Use ref to track current hearts to avoid stale closure issues
+  const heartsRef = useRef(heartsRemaining);
+  useEffect(() => {
+    heartsRef.current = heartsRemaining;
+  }, [heartsRemaining]);
+
   // Grace period tracking for tab switches and blur events
   const focusLossTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isFocusLostRef = useRef(false);
@@ -38,8 +44,8 @@ export function useExamSecurity({
     pendingViolationTypeRef.current = null;
   }, []);
 
-  // Handle focus loss with grace period
-  const handleFocusLossWithGrace = useCallback((violationType: string, currentHearts: number) => {
+  // Handle focus loss with grace period - uses ref for current hearts value
+  const handleFocusLossWithGrace = useCallback((violationType: string) => {
     // If already tracking a focus loss, don't restart the timer
     if (isFocusLostRef.current) return;
     
@@ -49,6 +55,9 @@ export function useExamSecurity({
 
     // Start grace period timer
     focusLossTimerRef.current = setTimeout(() => {
+      // Get current hearts from ref to avoid stale closure
+      const currentHearts = heartsRef.current;
+      
       // Only trigger violation if still in focus-lost state and exam is active
       if (isFocusLostRef.current && currentHearts > 0) {
         onViolation(violationType);
@@ -206,9 +215,9 @@ export function useExamSecurity({
     if (!isActive) return;
 
     const handleVisibilityChange = () => {
-      if (document.hidden && heartsRemaining > 0) {
+      if (document.hidden && heartsRef.current > 0) {
         // Tab is hidden - start grace period
-        handleFocusLossWithGrace('tab_switch', heartsRemaining);
+        handleFocusLossWithGrace('tab_switch');
       } else if (!document.hidden) {
         // Tab is visible again - cancel pending violation if within grace period
         handleFocusReturn();
@@ -221,16 +230,16 @@ export function useExamSecurity({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearGracePeriodTimer();
     };
-  }, [isActive, heartsRemaining, handleFocusLossWithGrace, handleFocusReturn, clearGracePeriodTimer]);
+  }, [isActive, handleFocusLossWithGrace, handleFocusReturn, clearGracePeriodTimer]);
 
   // Handle window blur with 10-second grace period
   useEffect(() => {
     if (!isActive) return;
 
     const handleBlur = () => {
-      if (heartsRemaining > 0) {
+      if (heartsRef.current > 0) {
         // Window lost focus - start grace period
-        handleFocusLossWithGrace('window_blur', heartsRemaining);
+        handleFocusLossWithGrace('window_blur');
       }
     };
 
@@ -247,7 +256,7 @@ export function useExamSecurity({
       window.removeEventListener('focus', handleFocus);
       clearGracePeriodTimer();
     };
-  }, [isActive, heartsRemaining, handleFocusLossWithGrace, handleFocusReturn, clearGracePeriodTimer]);
+  }, [isActive, handleFocusLossWithGrace, handleFocusReturn, clearGracePeriodTimer]);
 
   // Prevent copy, paste, right-click
   useEffect(() => {

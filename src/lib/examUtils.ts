@@ -155,7 +155,42 @@ export function formatExamTime(seconds: number): string {
   return `${secs}s`;
 }
 
-// Calculate score
+// Question weights for scoring (must total 100%)
+export const QUESTION_WEIGHTS = [0.30, 0.30, 0.40]; // Easy: 30%, Intermediate: 30%, Advanced: 40%
+
+// Calculate weighted score for exam
+export function calculateWeightedScore(
+  answers: { testsTotal: number; testsPassed: number; questionIndex: number }[]
+): { score: number; maxScore: number; percentage: number; questionScores: number[] } {
+  const questionScores: number[] = [];
+  let totalWeightedScore = 0;
+  
+  // Sort by question index to ensure correct weight assignment
+  const sortedAnswers = [...answers].sort((a, b) => a.questionIndex - b.questionIndex);
+  
+  sortedAnswers.forEach((answer, index) => {
+    const weight = QUESTION_WEIGHTS[index] || 0;
+    // Calculate proportional score: (tests passed / total tests) * weight * 100
+    const proportionalScore = answer.testsTotal > 0 
+      ? (answer.testsPassed / answer.testsTotal) * weight * 100 
+      : 0;
+    questionScores.push(proportionalScore);
+    totalWeightedScore += proportionalScore;
+  });
+  
+  // Max score is always 100%
+  const maxScore = 100;
+  const percentage = Math.round(totalWeightedScore * 100) / 100; // Round to 2 decimal places
+  
+  return { 
+    score: Math.round(totalWeightedScore * 100) / 100, 
+    maxScore, 
+    percentage,
+    questionScores 
+  };
+}
+
+// Legacy score calculation (for backwards compatibility)
 export function calculateScore(
   answers: { isCorrect: boolean; testsTotal: number; testsPassed: number }[]
 ): { score: number; maxScore: number; percentage: number } {
