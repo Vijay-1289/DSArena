@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { formatExamTime } from '@/lib/examUtils';
+import { formatExamTime, calculateWeightedScore, QUESTION_WEIGHTS } from '@/lib/examUtils';
 
 interface ExamResultsScreenProps {
   examSessionId: string;
@@ -100,49 +100,65 @@ export function ExamResultsScreen({
       const { data: answers } = await supabase
         .from('exam_answers')
         .select('*')
-        .eq('exam_session_id', examSessionId);
+        .eq('exam_session_id', examSessionId)
+        .order('question_index', { ascending: true });
 
       if (!answers) return;
 
-      const totalScore = answers.reduce((sum, a) => sum + (a.tests_passed || 0), 0);
-      const maxScore = answers.reduce((sum, a) => sum + (a.tests_total || 0), 0);
+      // Calculate weighted score using the new formula
+      const weightedResult = calculateWeightedScore(
+        answers.map((a, index) => ({
+          testsTotal: a.tests_total || 0,
+          testsPassed: a.tests_passed || 0,
+          questionIndex: a.question_index ?? index,
+        }))
+      );
+
       const questionsCorrect = answers.filter(a => a.is_correct).length;
       const compilationErrors = answers.reduce((sum, a) => sum + (a.compilation_errors || 0), 0);
       const runtimeErrors = answers.reduce((sum, a) => sum + (a.runtime_errors || 0), 0);
 
       // Generate AI analysis
-      const { data: aiData } = await supabase.functions.invoke('analyze-exam', {
-        body: {
-          examSessionId,
-          language,
-          answers: answers.map(a => ({
-            questionId: a.question_id,
-            code: a.code,
-            isCorrect: a.is_correct,
-            testsPassed: a.tests_passed,
-            testsTotal: a.tests_total,
-            compilationErrors: a.compilation_errors,
-            runtimeErrors: a.runtime_errors,
-            errorMessages: a.error_messages,
-            timeSpent: a.time_spent_seconds,
-          })),
-          totalTimeSpent: timeSpent,
-          violations: 3 - hearts,
-        },
-      });
+      let aiFeedback: string | null = null;
+      let weakConcepts: string[] = [];
+      let suggestions: string[] = [];
+      
+      try {
+        const { data: aiData } = await supabase.functions.invoke('analyze-exam', {
+          body: {
+            examSessionId,
+            language,
+            answers: answers.map(a => ({
+              questionId: a.question_id,
+              code: a.code,
+              isCorrect: a.is_correct,
+              testsPassed: a.tests_passed,
+              testsTotal: a.tests_total,
+              compilationErrors: a.compilation_errors,
+              runtimeErrors: a.runtime_errors,
+              errorMessages: a.error_messages,
+              timeSpent: a.time_spent_seconds,
+            })),
+            totalTimeSpent: timeSpent,
+            violations: 3 - hearts,
+          },
+        });
 
-      const aiFeedback = aiData?.analysis || null;
-      const weakConcepts = aiData?.weakConcepts || [];
-      const suggestions = aiData?.suggestions || [];
+        aiFeedback = aiData?.analysis || null;
+        weakConcepts = aiData?.weakConcepts || [];
+        suggestions = aiData?.suggestions || [];
+      } catch (aiErr) {
+        console.warn('AI analysis failed:', aiErr);
+      }
 
-      // Save results
+      // Save results with weighted score
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from('exam_results').insert({
+        await supabase.from('exam_results').upsert({
           exam_session_id: examSessionId,
           user_id: user.id,
-          total_score: totalScore,
-          max_score: maxScore,
+          total_score: Math.round(weightedResult.score), // Weighted percentage score
+          max_score: 100, // Max is always 100%
           questions_correct: questionsCorrect,
           questions_total: answers.length,
           total_compilation_errors: compilationErrors,
@@ -151,12 +167,12 @@ export function ExamResultsScreen({
           weak_concepts: weakConcepts,
           improvement_suggestions: suggestions,
           ai_feedback: aiFeedback,
-        });
+        }, { onConflict: 'exam_session_id' });
       }
 
       setResults({
-        totalScore,
-        maxScore,
+        totalScore: Math.round(weightedResult.score),
+        maxScore: 100,
         questionsCorrect,
         questionsTotal: answers.length,
         compilationErrors,
