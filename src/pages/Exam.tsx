@@ -372,12 +372,18 @@ export default function Exam() {
     }
   }, [sessionId, user, timeSpent]);
 
+  // Auto-submit handler for when lives reach 0 via grace period timeout
+  const handleAutoSubmitOnZeroLives = useCallback(() => {
+    handleSubmit(true);
+  }, []);
+
   const { enterFullscreen, exitFullscreen } = useExamSecurity({
     isActive: examState === 'active',
     heartsRemaining,
     onViolation: handleViolation,
     onDisqualify: handleDisqualify,
     onAbandon: handleAbandon,
+    onAutoSubmit: handleAutoSubmitOnZeroLives,
   });
 
   // Update ref when exitFullscreen changes
