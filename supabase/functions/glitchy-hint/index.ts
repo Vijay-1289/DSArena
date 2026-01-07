@@ -17,10 +17,10 @@ serve(async (req) => {
     console.log("Language:", language);
     console.log("Has error:", !!error);
 
-    const GOOGLE_AI_API_KEY = Deno.env.get('GOOGLE_AI_API_KEY');
+    const GOOGLE_API_KEY = Deno.env.get('GOOGLE_API_KEY');
     
-    if (!GOOGLE_AI_API_KEY) {
-      console.error("GOOGLE_AI_API_KEY not configured");
+    if (!GOOGLE_API_KEY) {
+      console.error("GOOGLE_API_KEY not configured");
       return new Response(JSON.stringify({ 
         hint: "DUDE! I need my brain configured first. Ask an admin to set up my AI key!",
         mood: "sleepy"
@@ -51,7 +51,7 @@ Respond as Glitchy! Keep it short and helpful.`;
 
     // Use Google Gemini API
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_AI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GOOGLE_API_KEY}`,
       {
         method: "POST",
         headers: {
