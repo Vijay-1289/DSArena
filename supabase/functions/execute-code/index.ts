@@ -1,3 +1,4 @@
+// @ts-nocheck - This is a Deno Edge Function, not regular TypeScript
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -139,11 +140,16 @@ serve(async (req) => {
   try {
     const { code, testCases, language = 'python' }: ExecuteRequest = await req.json();
 
-    console.log(`Executing ${language} code with`, testCases.length, 'test cases');
+    // Generate unique request ID for debugging
+    const requestId = crypto.randomUUID();
+    console.log(`[${requestId}] Executing ${language} code with ${testCases.length} test cases`);
 
     const config = languageConfig[language] || languageConfig.python;
     const results: TestResult[] = [];
     let consoleOutput = '';
+
+    // IMPORTANT: Each request creates fresh results array (no state leakage between requests)
+    // Each test case runs in isolated Piston execution environment
 
     for (const testCase of testCases) {
       const startTime = Date.now();
@@ -221,6 +227,8 @@ serve(async (req) => {
 
     const passedCount = results.filter(r => r.passed).length;
     consoleOutput = `[${config.language.toUpperCase()}] Passed ${passedCount}/${results.length} test cases\n\n` + consoleOutput;
+
+    console.log(`[${requestId}] Execution complete: ${passedCount}/${results.length} passed`);
 
     return new Response(
       JSON.stringify({ results, consoleOutput }),

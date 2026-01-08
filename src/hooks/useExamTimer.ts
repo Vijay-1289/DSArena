@@ -12,10 +12,11 @@ export function useExamTimer({ totalSeconds, onTimeUp, isActive }: UseExamTimerP
   const startTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Two hours in seconds (when submit becomes enabled)
-  const TWO_HOURS = 2 * 60 * 60; // 7200 seconds
-  
-  const canSubmit = timeSpent >= TWO_HOURS;
+  // Submit button unlocks at 1.5 hours (5400 seconds)
+  // Total exam duration is controlled by totalSeconds parameter (should be 2 hours / 7200 seconds)
+  const SUBMIT_UNLOCK_TIME = 1.5 * 60 * 60; // 5400 seconds
+
+  const canSubmit = timeSpent >= SUBMIT_UNLOCK_TIME;
 
   const startTimer = useCallback(() => {
     if (startTimeRef.current === null) {
@@ -53,7 +54,7 @@ export function useExamTimer({ totalSeconds, onTimeUp, isActive }: UseExamTimerP
         }
         return prev - 1;
       });
-      
+
       setTimeSpent((prev) => prev + 1);
     }, 1000);
 
@@ -68,12 +69,12 @@ export function useExamTimer({ totalSeconds, onTimeUp, isActive }: UseExamTimerP
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
   const getTimeUntilSubmit = useCallback(() => {
-    const remaining = TWO_HOURS - timeSpent;
+    const remaining = SUBMIT_UNLOCK_TIME - timeSpent;
     return remaining > 0 ? remaining : 0;
   }, [timeSpent]);
 

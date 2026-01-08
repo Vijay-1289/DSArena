@@ -103,7 +103,7 @@ export default function Exam() {
 
   // 2. Hooks that use the above handlers
   const { timeRemaining, timeSpent, canSubmit, formatTime, getTimeUntilSubmit } = useExamTimer({
-    totalSeconds: 1.5 * 60 * 60, // 1.5 hours
+    totalSeconds: 2 * 60 * 60, // 2 hours (7200 seconds)
     onTimeUp: handleTimeUp,
     isActive: examState === 'active',
   });
@@ -616,22 +616,22 @@ export default function Exam() {
     }).eq('exam_session_id', sessionId).eq('question_index', currentIndex);
   };
 
-  const handleRunComplete = async (results: any[], allPassed: boolean, compErrors: number, rtErrors: number) => {
+  const handleRunComplete = async (questionIndex: number, results: any[], allPassed: boolean, compErrors: number, rtErrors: number) => {
     if (!sessionId || !user) return;
 
     const newStatuses = [...questionStatuses];
-    newStatuses[currentIndex] = allPassed ? 'completed' : 'attempted';
+    newStatuses[questionIndex] = allPassed ? 'completed' : 'attempted';
     setQuestionStatuses(newStatuses);
 
     await supabase.from('exam_answers').update({
-      code: answers[currentIndex],
+      code: answers[questionIndex],
       is_correct: allPassed,
       tests_passed: results.filter(r => r.passed).length,
       tests_total: results.length,
       compilation_errors: compErrors,
       runtime_errors: rtErrors,
       // last_run_at, run_count - likely not in DB causing 400
-    }).eq('exam_session_id', sessionId).eq('question_index', currentIndex);
+    }).eq('exam_session_id', sessionId).eq('question_index', questionIndex);
   };
 
   if (!user) {
@@ -749,12 +749,14 @@ export default function Exam() {
         </div>
         <div className="w-1/2 p-4">
           <ExamCodeEditor
+            key={currentIndex}
             language={language}
             code={answers[currentIndex] || ''}
             onChange={handleCodeChange}
             testCases={currentQuestion.visibleTestCases}
             hiddenTestCases={currentQuestion.hiddenTestCases}
             onRunComplete={handleRunComplete}
+            questionIndex={currentIndex}
             onSave={handleSaveCode}
             forcePass={isBypassUser}
           />

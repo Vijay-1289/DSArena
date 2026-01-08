@@ -21,7 +21,8 @@ interface ExamCodeEditorProps {
   onChange: (code: string) => void;
   testCases: { input: string; expectedOutput: string }[];
   hiddenTestCases: { input: string; expectedOutput: string }[];
-  onRunComplete: (results: TestResult[], allPassed: boolean, compilationErrors: number, runtimeErrors: number) => void;
+  onRunComplete: (questionIndex: number, results: TestResult[], allPassed: boolean, compilationErrors: number, runtimeErrors: number) => void;
+  questionIndex: number;
   onSave?: (code: string) => Promise<void>;
   disabled?: boolean;
   forcePass?: boolean; // If true, always show 100% pass without running actual code
@@ -34,12 +35,15 @@ export function ExamCodeEditor({
   testCases,
   hiddenTestCases,
   onRunComplete,
+  questionIndex,
   onSave,
   disabled = false,
   forcePass = false,
 }: ExamCodeEditorProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isRunningRef = useRef(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -83,9 +87,28 @@ export function ExamCodeEditor({
     return () => document.removeEventListener('paste', handlePaste, true);
   }, []);
 
-  const runCode = useCallback(async () => {
-    if (isRunning || disabled) return;
+  // Reset results when question changes
+  useEffect(() => {
+    setResults([]);
+    setConsoleOutput('');
+  }, [questionIndex]);
 
+  const runCode = useCallback(async () => {
+    // Triple-layer race condition prevention:
+    // 1. Check ref first (synchronous, no React state delay)
+    if (isRunningRef.current || disabled) return;
+
+    // 2. Abort any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // 3. Create new abort controller for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // Set running flag immediately (ref first, then state)
+    isRunningRef.current = true;
     setIsRunning(true);
     setResults([]);
     setConsoleOutput('');
@@ -102,7 +125,7 @@ export function ExamCodeEditor({
 
       setResults(fakeResults);
       setConsoleOutput('All test cases passed successfully!');
-      onRunComplete(fakeResults, true, 0, 0);
+      onRunComplete(questionIndex, fakeResults, true, 0, 0);
       toast.success('All test cases passed!');
       setIsRunning(false);
       return;
@@ -129,10 +152,16 @@ export function ExamCodeEditor({
         },
       });
 
+      // Check if this request was cancelled while in-flight
+      if (controller.signal.aborted) {
+        console.log('Request was cancelled, skipping state update');
+        return;
+      }
+
       if (error) {
         toast.error('Failed to run code', { description: error.message });
         setConsoleOutput(`Error: ${error.message}`);
-        onRunComplete([], false, 1, 0);
+        onRunComplete(questionIndex, [], false, 1, 0);
         return;
       }
 
@@ -144,7 +173,7 @@ export function ExamCodeEditor({
       const compilationErrors = testResults.filter((r) => r.error?.includes('compile') || r.error?.includes('syntax')).length;
       const runtimeErrors = testResults.filter((r) => r.error && !r.error.includes('compile') && !r.error.includes('syntax')).length;
 
-      onRunComplete(testResults, allPassed, compilationErrors, runtimeErrors);
+      onRunComplete(questionIndex, testResults, allPassed, compilationErrors, runtimeErrors);
 
       if (allPassed) {
         toast.success('All test cases passed!');
@@ -153,13 +182,27 @@ export function ExamCodeEditor({
         toast.info(`${passed}/${testResults.length} test cases passed`);
       }
     } catch (err) {
+      // Check if error is due to abort
+      if (controller.signal.aborted) {
+        console.log('Request cancelled');
+        return;
+      }
       console.error('Run error:', err);
       toast.error('Failed to execute code');
-      onRunComplete([], false, 1, 0);
+      onRunComplete(questionIndex, [], false, 1, 0);
     } finally {
-      setIsRunning(false);
+      // Only clear running flag if request wasn't aborted
+      if (!controller.signal.aborted) {
+        isRunningRef.current = false;
+        setIsRunning(false);
+      }
+
+      // Clear the ref if this was the active controller
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
     }
-  }, [code, language, testCases, hiddenTestCases, onRunComplete, isRunning, disabled, forcePass]);
+  }, [code, language, testCases, hiddenTestCases, onRunComplete, questionIndex, isRunning, disabled, forcePass]);
 
   const handleSave = useCallback(async () => {
     if (isSaving || !onSave) return;
@@ -270,8 +313,8 @@ export function ExamCodeEditor({
               <div
                 key={index}
                 className={`p-3 rounded-lg border ${result.passed
-                    ? 'bg-green-500/10 border-green-500/30'
-                    : 'bg-red-500/10 border-red-500/30'
+                  ? 'bg-green-500/10 border-green-500/30'
+                  : 'bg-red-500/10 border-red-500/30'
                   }`}
               >
                 <div className="flex items-center gap-2 mb-2">
