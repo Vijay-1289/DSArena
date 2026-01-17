@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admins: {
+        Row: {
+          admin_code: string
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          is_root: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_code: string
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          is_root?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_code?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          is_root?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_config: {
         Row: {
           key: string
@@ -237,6 +267,94 @@ export type Database = {
           },
         ]
       }
+      exam_instances: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number
+          end_time: string
+          host_admin_id: string | null
+          id: string
+          max_students: number
+          score_per_question: number
+          start_time: string
+          status: Database["public"]["Enums"]["exam_instance_status"] | null
+          topic: string
+          total_questions: number
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes: number
+          end_time: string
+          host_admin_id?: string | null
+          id?: string
+          max_students: number
+          score_per_question: number
+          start_time: string
+          status?: Database["public"]["Enums"]["exam_instance_status"] | null
+          topic: string
+          total_questions: number
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number
+          end_time?: string
+          host_admin_id?: string | null
+          id?: string
+          max_students?: number
+          score_per_question?: number
+          start_time?: string
+          status?: Database["public"]["Enums"]["exam_instance_status"] | null
+          topic?: string
+          total_questions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_instances_host_admin_id_fkey"
+            columns: ["host_admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_questions: {
+        Row: {
+          created_at: string | null
+          description: string
+          exam_instance_id: string | null
+          id: string
+          input_format: string | null
+          test_cases: Json
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          exam_instance_id?: string | null
+          id?: string
+          input_format?: string | null
+          test_cases: Json
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          exam_instance_id?: string | null
+          id?: string
+          input_format?: string | null
+          test_cases?: Json
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_questions_exam_instance_id_fkey"
+            columns: ["exam_instance_id"]
+            isOneToOne: false
+            referencedRelation: "exam_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exam_results: {
         Row: {
           ai_feedback: string | null
@@ -306,6 +424,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           current_question_index: number | null
+          exam_instance_id: string | null
           hearts_remaining: number
           id: string
           language: string
@@ -327,6 +446,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_question_index?: number | null
+          exam_instance_id?: string | null
           hearts_remaining?: number
           id?: string
           language: string
@@ -348,6 +468,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           current_question_index?: number | null
+          exam_instance_id?: string | null
           hearts_remaining?: number
           id?: string
           language?: string
@@ -363,7 +484,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "exam_sessions_exam_instance_id_fkey"
+            columns: ["exam_instance_id"]
+            isOneToOne: false
+            referencedRelation: "exam_instances"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       exam_violations: {
         Row: {
@@ -620,6 +749,7 @@ export type Database = {
           updated_at: string | null
           username: string | null
           weakest_topic: string | null
+          xp: number | null
         }
         Insert: {
           avatar_url?: string | null
@@ -647,6 +777,7 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           weakest_topic?: string | null
+          xp?: number | null
         }
         Update: {
           avatar_url?: string | null
@@ -674,6 +805,7 @@ export type Database = {
           updated_at?: string | null
           username?: string | null
           weakest_topic?: string | null
+          xp?: number | null
         }
         Relationships: []
       }
@@ -1071,6 +1203,7 @@ export type Database = {
       arena_mode: "practice" | "interview"
       arena_result: "solved" | "failed" | "timeout" | "abandoned"
       difficulty_level: "easy" | "medium" | "hard"
+      exam_instance_status: "scheduled" | "active" | "completed"
       exam_status: "in_progress" | "completed" | "abandoned" | "disqualified"
       skill_tier: "bronze" | "silver" | "gold" | "platinum" | "diamond"
       submission_status:
@@ -1213,6 +1346,7 @@ export const Constants = {
       arena_mode: ["practice", "interview"],
       arena_result: ["solved", "failed", "timeout", "abandoned"],
       difficulty_level: ["easy", "medium", "hard"],
+      exam_instance_status: ["scheduled", "active", "completed"],
       exam_status: ["in_progress", "completed", "abandoned", "disqualified"],
       skill_tier: ["bronze", "silver", "gold", "platinum", "diamond"],
       submission_status: [

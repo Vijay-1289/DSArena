@@ -3,39 +3,46 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-        "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface InviteRequest {
-    email: string;
-    adminCode: string;
+  email: string;
+  adminCode: string;
+  inviterName?: string;
 }
 
-serve(async (req) => {
-    if (req.method === "OPTIONS") {
-        return new Response(null, { headers: corsHeaders });
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    if (!RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is not set in Edge Function secrets.");
     }
 
-    try {
-        const { email, adminCode }: InviteRequest = await req.json();
+    const { email, adminCode, inviterName }: InviteRequest = await req.json();
 
-        if (!RESEND_API_KEY) {
-            throw new Error("RESEND_API_KEY is not set in Edge Function secrets.");
-        }
+    if (!email || !adminCode) {
+      return new Response(
+        JSON.stringify({ error: "Email and admin code are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-        const res = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${RESEND_API_KEY}`,
-            },
-            body: JSON.stringify({
-                from: "DSArena Protocol <onboarding@resend.dev>",
-                to: [email],
-                subject: "Welcome to the DSArena Host Registry",
-                html: `
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "DSArena Protocol <onboarding@resend.dev>",
+        to: [email],
+        subject: "Welcome to the DSArena Host Registry",
+        html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #1e293b; background-color: #030712; color: #f8fafc; border-radius: 12px;">
             <div style="text-align: center; margin-bottom: 30px;">
               <h1 style="color: #22d3ee; margin-bottom: 5px;">DSArena Host Console</h1>
@@ -43,7 +50,7 @@ serve(async (req) => {
             </div>
             
             <p>Welcome, Host Node.</p>
-            <p>You have been authorized to manage and host examination sessions on the DSArena platform. Your unique protocol signature has been successfully synchronized with our neural registry.</p>
+            <p>${inviterName ? `<strong>${inviterName}</strong>` : "A system administrator"} has authorized you to manage and host examination sessions on the DSArena platform. Your unique protocol signature has been successfully synchronized with our neural registry.</p>
             
             <div style="background-color: #0f172a; border: 1px dashed #22d3ee; padding: 20px; text-align: center; border-radius: 8px; margin: 30px 0;">
               <p style="margin: 0; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Your Host Protocol Code</p>
@@ -58,24 +65,26 @@ serve(async (req) => {
             </div>
           </div>
         `,
-            }),
-        });
+      }),
+    });
 
-        const data = await res.json();
+    const responseData = await res.json();
 
-        if (!res.ok) {
-            throw new Error(`Resend Error: ${JSON.stringify(data)}`);
-        }
-
-        return new Response(JSON.stringify({ success: true, data }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-        });
-    } catch (error: any) {
-        console.error("Invite Email Error:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 500,
-        });
+    if (!res.ok) {
+      throw new Error(responseData.message || "Failed to send invitation email");
     }
-});
+
+    return new Response(JSON.stringify({ success: true, data: responseData }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (error: any) {
+    console.error("Invite Email Error:", error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
+};
+
+serve(handler);
