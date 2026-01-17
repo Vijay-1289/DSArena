@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { 
-  fetchLivesData, 
-  getLocalLivesData, 
-  getTimeUntilNextRestore, 
-  formatTimeRemaining 
+import {
+  fetchLivesData,
+  getLocalLivesData,
+  getTimeUntilNextRestore,
+  formatTimeRemaining
 } from '@/lib/livesSystem';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/lib/auth';
@@ -13,9 +13,10 @@ import { useAuth } from '@/lib/auth';
 interface LivesDisplayProps {
   className?: string;
   showTimer?: boolean;
+  hideLabel?: boolean;
 }
 
-export function LivesDisplay({ className, showTimer = true }: LivesDisplayProps) {
+export function LivesDisplay({ className, showTimer = true, hideLabel = false }: LivesDisplayProps) {
   const { user } = useAuth();
   const [livesData, setLivesData] = useState(() => getLocalLivesData(user?.id));
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
@@ -85,10 +86,10 @@ export function LivesDisplay({ className, showTimer = true }: LivesDisplayProps)
       </TooltipTrigger>
       <TooltipContent>
         <p className="text-sm">
-          {isLoading 
+          {isLoading
             ? "Loading lives..."
-            : lives === 0 
-              ? "No lives left! Wait for restoration or come back tomorrow." 
+            : lives === 0
+              ? "No lives left! Wait for restoration or come back tomorrow."
               : `${lives} lives remaining. Leaving a problem page costs a life.`}
         </p>
         {!isLoading && timeRemaining !== null && timeRemaining > 0 && (

@@ -1,0 +1,129 @@
+Python:
+
+import sys
+
+# Read all input at once and tokenize by any whitespace
+tokens = sys.stdin.read().split()
+idx = 0
+
+def read_next():
+    """Get the next token from input (handles spaces, tabs, newlines)"""
+    global idx
+    val = tokens[idx]
+    idx += 1
+    return val
+
+def read_int():
+    """Read next token as integer"""
+    return int(read_next())
+
+def read_float():
+    """Read next token as float"""
+    return float(read_next())
+
+# ========== YOUR SOLUTION BELOW ==========
+
+def solution():
+    # Example: Read two integers
+    # a = read_int()
+    # b = read_int()
+    # return a + b
+    pass
+
+# Run and print result
+result = solution()
+if result is not None:
+    print(result)
+
+
+=================================================================================================
+
+Javascript:
+
+const fs = require('fs');
+
+// Read all input at once and tokenize by any whitespace
+const tokens = fs.readFileSync(0, 'utf-8').trim().split(/\s+/);
+let idx = 0;
+
+function readNext() {
+    // Get the next token from input (handles spaces, tabs, newlines)
+    return tokens[idx++];
+}
+
+function readInt() {
+    // Read next token as integer
+    return parseInt(readNext(), 10);
+}
+
+function readFloat() {
+    // Read next token as float
+    return parseFloat(readNext());
+}
+
+// ========== YOUR SOLUTION BELOW ==========
+
+function solution() {
+    // Example: Read two integers
+    // const a = readInt();
+    // const b = readInt();
+    // return a + b;
+}
+
+// Run and print result
+const result = solution();
+if (result !== undefined) {
+    console.log(result);
+}
+
+=================================================================================================
+
+C++:
+
+#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+int main() {
+    // Fast I/O (optional but recommended)
+    ios_base::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    // C++ cin >> is already whitespace-agnostic by default!
+    // It automatically skips spaces, tabs, and newlines.
+    
+    // Example: Read two integers
+    // int a, b;
+    // cin >> a >> b;
+    // cout << a + b << endl;
+    
+    // ========== YOUR SOLUTION BELOW ==========
+    
+    
+    return 0;
+}
+
+=================================================================================================
+
+Java:
+
+import java.util.*;
+
+public class Main {
+    static Scanner scanner = new Scanner(System.in);
+    
+    // Scanner.next() and nextInt() are already whitespace-agnostic!
+    // They automatically skip spaces, tabs, and newlines.
+    
+    public static void main(String[] args) {
+        // Example: Read two integers
+        // int a = scanner.nextInt();
+        // int b = scanner.nextInt();
+        // System.out.println(a + b);
+        
+        // ========== YOUR SOLUTION BELOW ==========
+        
+        
+    }
+}

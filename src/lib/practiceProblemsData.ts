@@ -3,13 +3,18 @@ export interface PracticeProblemData {
   id: string;
   slug: string;
   title: string;
+  difficulty: 'easy' | 'medium' | 'hard';
   description: string;
   inputFormat: string;
   outputFormat: string;
   constraints: string;
   starterCode: string;
+  starterTemplates?: Record<string, string>;
+  timeLimitMs?: number;
+  memoryLimitMb?: number;
   visibleTestCases: { input: string; expectedOutput: string }[];
   hiddenTestCases: { input: string; expectedOutput: string }[];
+  language?: string;
 }
 
 // Pattern 1: Ascending Numbers
@@ -17,6 +22,7 @@ export const patternAscendingNumbers: PracticeProblemData = {
   id: "pattern-ascending-numbers",
   slug: "ascending-numbers",
   title: "Print Ascending Numbers Pattern",
+  difficulty: "easy",
   description: `Print the following number pattern:
 
 1
@@ -54,6 +60,7 @@ export const patternDescendingNumbers: PracticeProblemData = {
   id: "pattern-descending-numbers",
   slug: "descending-numbers",
   title: "Print Descending Numbers Pattern",
+  difficulty: "easy",
   description: `Print the following number pattern:
 
 5 4 3 2 1
@@ -91,6 +98,7 @@ export const patternLeftStars: PracticeProblemData = {
   id: "pattern-left-stars",
   slug: "left-stars",
   title: "Print Left Aligned Stars Pattern",
+  difficulty: "easy",
   description: `Print the following star pattern:
 
 *
@@ -128,6 +136,7 @@ export const patternRightStars: PracticeProblemData = {
   id: "pattern-right-stars",
   slug: "right-stars",
   title: "Print Right Aligned Stars Pattern",
+  difficulty: "easy",
   description: `Print the following star pattern:
 
 * * * * *
@@ -165,6 +174,7 @@ export const primeNumbersProblem: PracticeProblemData = {
   id: "prime-numbers",
   slug: "prime-numbers",
   title: "Print Prime Numbers Before N",
+  difficulty: "easy",
   description: `Print all prime numbers before the given number n.
 
 A prime number is a natural number greater than 1 that has no positive divisors other than 1 and itself.
@@ -205,6 +215,7 @@ export const fibonacciSeriesProblem: PracticeProblemData = {
   id: "fibonacci-series",
   slug: "fibonacci-series",
   title: "Generate Fibonacci Series",
+  difficulty: "easy",
   description: `Generate the Fibonacci series up to the nth number.
 
 The Fibonacci sequence starts with 0 and 1, and each subsequent number is the sum of the two preceding ones.
@@ -242,6 +253,7 @@ export const palindromeCheckProblem: PracticeProblemData = {
   id: "palindrome-check",
   slug: "palindrome-check",
   title: "Check Palindrome Number",
+  difficulty: "easy",
   description: `Check whether the given number is a palindrome or not.
 
 A palindrome number reads the same forwards and backwards.
@@ -281,6 +293,7 @@ export const armstrongCheckProblem: PracticeProblemData = {
   id: "armstrong-check",
   slug: "armstrong-check",
   title: "Check Armstrong Number",
+  difficulty: "easy",
   description: `Check whether the given number is an Armstrong number or not.
 
 An Armstrong number is a number that is equal to the sum of its digits raised to the power of the number of digits.

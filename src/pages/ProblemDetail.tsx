@@ -1,42 +1,34 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
-import { CodeEditor } from '@/components/editor/CodeEditor';
-import { TestCasePanel } from '@/components/problems/TestCasePanel';
+import { useAuth } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, Heart, Home } from 'lucide-react';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
-import { problemsData, allProblemsData } from '@/lib/problemsData';
-import { useAuth } from '@/lib/auth';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Play, Send, Save, Loader2, ChevronLeft, ChevronRight, ArrowRight, CheckCircle2, Heart, Home, Gift } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import confetti from 'canvas-confetti';
-import { getLocalLivesData, loseLife, hasLives, hasLivesAsync, fetchLivesData, formatTimeRemaining, getTimeUntilNextRestore } from '@/lib/livesSystem';
-import { LivesDisplay } from '@/components/lives/LivesDisplay';
-import { GlitchyAssistant } from '@/components/editor/GlitchyAssistant';
-import { LanguageSelector } from '@/components/editor/LanguageSelector';
-
-import { CodeAnalysisPanel } from '@/components/problems/CodeAnalysisPanel';
-import { startProblemSession, endProblemSession, handleVisibilityChange, getCurrentSessionDuration, formatDuration } from '@/lib/timeTracking';
+import { allProblemsData } from '@/lib/problemsData';
 import { checkBonusEligibility, recordFastSolve, resetFastSolveStreak, getBonusCode } from '@/lib/bonusCodeSystem';
 import { useMotivationToast } from '@/hooks/useMotivationToast';
 import { useVideoRecommendations } from '@/hooks/useVideoRecommendations';
+import { useLivesManager } from '@/hooks/useLivesManager';
+import { useProblemExecution } from '@/hooks/useProblemExecution';
 import { learningRecommender } from '@/lib/learningRecommender';
+import { LivesDisplay } from '@/components/lives/LivesDisplay';
+import { GlitchyAssistant } from '@/components/editor/GlitchyAssistant';
+import { CodeAnalysisPanel } from '@/components/problems/CodeAnalysisPanel';
+import { startProblemSession, endProblemSession, getCurrentSessionDuration } from '@/lib/timeTracking';
 
-interface TestCase {
-  id: string;
-  input: string;
-  expected_output: string;
-  is_visible: boolean;
-  display_order: number;
-}
+// Neural Editor components
+import { ProblemDescriptionPane } from '@/components/arena/ProblemDescriptionPane';
+import { NeuralEditorPane } from '@/components/arena/NeuralEditorPane';
+import { ExecutionStreamPane } from '@/components/arena/ExecutionStreamPane';
+import CompilerVisualizerModal from '@/components/arena/CompilerVisualizerModal';
+import { generateStarterCode } from '@/lib/templateGenerator';
 
 interface TestResult {
   passed: boolean;
@@ -51,39 +43,29 @@ export default function ProblemDetail() {
   const { user } = useAuth();
 
   const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [results, setResults] = useState<TestResult[] | null>(null);
-  const [consoleOutput, setConsoleOutput] = useState('');
-  const [showDescription, setShowDescription] = useState(true);
-  const [solved, setSolved] = useState(false);
-  const [alreadySolved, setAlreadySolved] = useState(false);
-  const [noLives, setNoLives] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [bonusApplied, setBonusApplied] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [attemptCount, setAttemptCount] = useState(0);
-  
+  const [isVisualizerOpen, setIsVisualizerOpen] = useState(false);
+
   const sessionStartedRef = useRef(false);
-  
-  // Hooks for intelligent systems
+
   const { showMotivation } = useMotivationToast();
   const { triggerVideoRecommendation, resetFailures } = useVideoRecommendations();
+  const { noLives, penalize, timeUntilRestore, formattedTimeRemaining } = useLivesManager(user?.id);
+  const { running, submitting, results, consoleOutput, lastError, execute, setResults, setLastError } = useProblemExecution();
 
-  // Find problem from local data (includes Python track)
+  const [loading, setLoading] = useState(true);
+  const [solved, setSolved] = useState(false);
+  const [alreadySolved, setAlreadySolved] = useState(false);
+
   const problem = allProblemsData.find(p => p.slug === slug);
-  const problemIndex = allProblemsData.findIndex(p => p.slug === slug);
-  
-  // Check if this is a DSA problem (allows language selection) or a track problem (fixed language)
-  // Track problems have an explicit language field OR category containing "track"
+
   const isDSAProblem = useMemo(() => {
     if (!problem) return false;
-    // If problem has explicit language field, it's a track problem
     if (problem.language) return false;
     const category = problem.category.toLowerCase();
-    // Check for track in category OR language-specific categories
     const pythonCategories = ['python core', 'data structures', 'functions', 'oop', 'file handling', 'algorithms'];
     if (pythonCategories.some(c => category.includes(c.toLowerCase()) && problem.id.startsWith('python-'))) {
       return false;
@@ -91,667 +73,235 @@ export default function ProblemDetail() {
     return !category.includes('track');
   }, [problem]);
 
-  // Determine default language based on problem's explicit language field or category
   const defaultLanguage = useMemo(() => {
     if (!problem) return 'python';
-    
-    // Use explicit language field if available
     if (problem.language) return problem.language;
-    
-    // Check if it's a Python track problem by ID prefix
     if (problem.id.startsWith('python-')) return 'python';
     if (problem.id.startsWith('js-') || problem.id.startsWith('javascript-')) return 'javascript';
     if (problem.id.startsWith('java-')) return 'java';
     if (problem.id.startsWith('cpp-') || problem.id.startsWith('c++-')) return 'cpp';
-    
-    // Fallback to category-based detection
+
     const category = problem.category.toLowerCase();
     if (category.includes('javascript')) return 'javascript';
-    if (category.includes('java') && !category.includes('javascript')) return 'java';
-    if (category.includes('c++') || category.includes('cpp')) return 'cpp';
-    if (category.includes('go')) return 'go';
-    if (category.includes('rust')) return 'rust';
-    if (category.includes('c#') || category.includes('csharp')) return 'csharp';
-    if (category.includes('ruby')) return 'ruby';
-    if (category.includes('swift')) return 'swift';
-    if (category.includes('kotlin')) return 'kotlin';
-    if (category.includes('python')) return 'python';
-    
-    return 'python'; // Default for DSA problems
+    if (category.includes('java')) return 'java';
+    if (category.includes('c++')) return 'cpp';
+    return 'python';
   }, [problem]);
 
-  // Final editor language: user selection for DSA, fixed for tracks
-  const editorLanguage = isDSAProblem && selectedLanguage ? selectedLanguage : defaultLanguage;
+  const editorLanguage = selectedLanguage || defaultLanguage;
 
-  // Language-specific starter code templates
-  const getStarterCodeForLanguage = useCallback((lang: string): string => {
-    const templates: Record<string, string> = {
-      python: `# Write your solution here
-def solution():
-    # Your code here
-    pass
-
-# Read input
-# n = int(input())
-# Print output
-# print(result)
-`,
-      javascript: `// Write your solution here
-function solution() {
-    // Your code here
-}
-
-// Read input from stdin
-const readline = require('readline');
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-let lines = [];
-rl.on('line', (line) => {
-    lines.push(line);
-});
-
-rl.on('close', () => {
-    // Parse input and call solution
-    console.log(solution());
-});
-`,
-      java: `import java.util.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        // Read input
-        // int n = scanner.nextInt();
-        
-        // Your solution here
-        
-        // Print output
-        // System.out.println(result);
-    }
-}
-`,
-      cpp: `#include <iostream>
-#include <vector>
-#include <string>
-using namespace std;
-
-int main() {
-    // Read input
-    // int n;
-    // cin >> n;
-    
-    // Your solution here
-    
-    // Print output
-    // cout << result << endl;
-    
-    return 0;
-}
-`,
-      go: `package main
-
-import (
-    "fmt"
-)
-
-func main() {
-    // Read input
-    // var n int
-    // fmt.Scan(&n)
-    
-    // Your solution here
-    
-    // Print output
-    // fmt.Println(result)
-}
-`,
-      rust: `use std::io::{self, BufRead};
-
-fn main() {
-    let stdin = io::stdin();
-    let mut lines = stdin.lock().lines();
-    
-    // Read input
-    // let n: i32 = lines.next().unwrap().unwrap().parse().unwrap();
-    
-    // Your solution here
-    
-    // Print output
-    // println!("{}", result);
-}
-`,
-      csharp: `using System;
-
-class Program {
-    static void Main() {
-        // Read input
-        // int n = int.Parse(Console.ReadLine());
-        
-        // Your solution here
-        
-        // Print output
-        // Console.WriteLine(result);
-    }
-}
-`,
-      ruby: `# Write your solution here
-
-# Read input
-# n = gets.to_i
-
-# Your solution here
-
-# Print output
-# puts result
-`,
-      swift: `import Foundation
-
-// Read input
-// let n = Int(readLine()!)!
-
-// Your solution here
-
-// Print output
-// print(result)
-`,
-      kotlin: `fun main() {
-    // Read input
-    // val n = readLine()!!.toInt()
-    
-    // Your solution here
-    
-    // Print output
-    // println(result)
-}
-`,
-    };
-    return templates[lang] || templates.python;
-  }, []);
-
-  // Initialize selected language when problem loads (for DSA problems)
   useEffect(() => {
-    if (isDSAProblem && !selectedLanguage) {
+    if (!selectedLanguage && defaultLanguage) {
       setSelectedLanguage(defaultLanguage);
     }
-  }, [isDSAProblem, defaultLanguage, selectedLanguage]);
+  }, [defaultLanguage, selectedLanguage]);
 
-  // Update code when language changes for DSA problems
   useEffect(() => {
-    if (isDSAProblem && selectedLanguage) {
-      // Check if there's a saved draft for this language
-      const draftKey = `draft-${user?.id}-${problem?.id}-${selectedLanguage}`;
-      const savedDraft = localStorage.getItem(draftKey);
-      if (savedDraft) {
-        setCode(savedDraft);
-      } else {
-        // Use language-specific starter code
-        setCode(getStarterCodeForLanguage(selectedLanguage));
-      }
-    }
-  }, [selectedLanguage, isDSAProblem, user?.id, problem?.id, getStarterCodeForLanguage]);
-  
-  // Get next problem in same category
-  const nextProblem = useMemo(() => {
-    if (!problem) return null;
-    const sameCategoryProblems = allProblemsData.filter(p => p.category === problem.category);
-    const currentIdx = sameCategoryProblems.findIndex(p => p.slug === slug);
-    if (currentIdx >= 0 && currentIdx < sameCategoryProblems.length - 1) {
-      return sameCategoryProblems[currentIdx + 1];
-    }
-    return null;
-  }, [problem, slug]);
+    const initializeCode = async () => {
+      if (!editorLanguage || !problem || !user?.id) return;
 
-  // Check if already solved
+      const draftKey = `draft-${user.id}-${problem.id}-${editorLanguage}`;
+
+      // 1. Try local storage first (instant)
+      const savedLocalDraft = localStorage.getItem(draftKey);
+      if (savedLocalDraft) {
+        setCode(savedLocalDraft);
+        return;
+      }
+
+      // 2. Fallback to cloud draft
+      const { loadDraft } = await import('@/lib/progressStorage');
+      const savedCloudDraft = await loadDraft(user.id, problem.id);
+
+      if (savedCloudDraft) {
+        setCode(savedCloudDraft);
+        localStorage.setItem(draftKey, savedCloudDraft);
+      } else {
+        // 3. Last fallback: Starter code
+        setCode(generateStarterCode(problem, editorLanguage));
+      }
+    };
+
+    initializeCode();
+  }, [editorLanguage, user?.id, problem]);
+
   useEffect(() => {
     const checkIfSolved = async () => {
       if (!user || !problem) return;
-
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(problem.id);
-      const filter = isUuid
-        ? `problem_id.eq.${problem.id}`
-        : `problem_slug.eq.${problem.id}`;
-
-      const { data } = await supabase
-        .from('user_solved')
-        .select('id')
-        .eq('user_id', user.id)
-        .or(filter)
-        .maybeSingle();
-
-      if (data) {
-        setAlreadySolved(true);
-        setSolved(true);
-      }
+      const filter = isUuid ? `problem_id.eq.${problem.id}` : `problem_slug.eq.${problem.id}`;
+      const { data } = await supabase.from('user_solved').select('id').eq('user_id', user.id).or(filter).maybeSingle();
+      if (data) { setAlreadySolved(true); setSolved(true); }
     };
     checkIfSolved();
   }, [user, problem]);
 
-  // Initialize lives from Supabase
+  const lastPenalizedRef = useRef<number>(0);
+
+  // Consolidate focus violation penalties (visibility change and blur)
   useEffect(() => {
-    const initLives = async () => {
-      if (!user?.id) return;
-      
-      try {
-        await fetchLivesData(user.id);
-        const hasAnyLives = await hasLivesAsync(user.id);
-        setNoLives(!hasAnyLives);
-      } catch (error) {
-        console.error('Error initializing lives:', error);
-      }
-    };
-    
-    initLives();
-  }, [user?.id]);
+    if (noLives) return;
 
-  // Lives system - detect when user leaves the page
-  useEffect(() => {
-    // Check if user has lives (sync check from cache)
-    if (!hasLives(user?.id)) {
-      setNoLives(true);
-      return;
-    }
+    const handleFocusLoss = () => {
+      const now = Date.now();
+      // Only penalize if we haven't penalized in the last 2 seconds to avoid double-firing
+      if (now - lastPenalizedRef.current < 2000) return;
 
-    // Only apply lives system if problem is not already solved
-    if (alreadySolved) return;
-
-    const handleVisibilityChange = () => {
-      if (document.hidden && !alreadySolved && hasLives(user?.id)) {
-        // User switched tabs or minimized - lose a life
-        const newLivesData = loseLife(user?.id);
-        
-        if (newLivesData.lives === 0) {
-          setNoLives(true);
-          toast.error('You lost all your lives! Come back in 10 minutes.', {
-            duration: 5000,
-          });
-        } else {
-          toast.warning(`You lost a life for leaving! ${newLivesData.lives} lives remaining.`, {
-            duration: 3000,
-          });
-        }
+      if (document.hidden || !document.hasFocus()) {
+        penalize();
+        lastPenalizedRef.current = now;
       }
     };
 
-    const handleBlur = () => {
-      if (!alreadySolved && hasLives(user?.id)) {
-        // Window lost focus - lose a life (only if we still have lives)
-        const currentLives = getLocalLivesData(user?.id);
-        if (currentLives.lives > 0) {
-          const newLivesData = loseLife(user?.id);
-          
-          if (newLivesData.lives === 0) {
-            setNoLives(true);
-            toast.error('You lost all your lives! Come back in 10 minutes.', {
-              duration: 5000,
-            });
-          } else {
-            toast.warning(`Focus lost! You lost a life. ${newLivesData.lives} remaining.`, {
-              duration: 3000,
-            });
-          }
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleFocusLoss);
+    window.addEventListener('blur', handleFocusLoss);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleFocusLoss);
+      window.removeEventListener('blur', handleFocusLoss);
     };
-  }, [user, alreadySolved]);
+  }, [noLives, penalize]);
 
-  // Reset life check when problem changes
   useEffect(() => {
-    const checkLives = async () => {
-      if (user?.id) {
-        const hasAnyLives = await hasLivesAsync(user.id);
-        setNoLives(!hasAnyLives);
-      } else {
-        setNoLives(!hasLives(user?.id));
-      }
-    };
-    checkLives();
-  }, [slug, user?.id]);
-
-  // Time tracking - start session when problem loads
-  useEffect(() => {
-    if (!user?.id || !problem || sessionStartedRef.current || alreadySolved) return;
-    
+    if (!user?.id || !problem || sessionStartedRef.current) return;
     sessionStartedRef.current = true;
     startProblemSession(user.id, problem.id);
-    
-    // Update timer every second
-    const timerInterval = setInterval(() => {
-      setCurrentTime(getCurrentSessionDuration());
-    }, 1000);
-    
-    // Add visibility change listener
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+    const timerInterval = setInterval(() => setCurrentTime(getCurrentSessionDuration()), 1000);
     return () => {
       clearInterval(timerInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      // End session on unmount
       if (user?.id && sessionStartedRef.current) {
         endProblemSession(user.id, solved);
         sessionStartedRef.current = false;
       }
     };
-  }, [user?.id, problem, alreadySolved, solved]);
-
-  // Check for bonus code eligibility
-  useEffect(() => {
-    const checkBonus = async () => {
-      if (!user?.id || alreadySolved || bonusApplied) return;
-      
-      const eligible = await checkBonusEligibility(user.id);
-      if (eligible) {
-        const bonusCode = getBonusCode(editorLanguage);
-        setCode(bonusCode);
-        setBonusApplied(true);
-        await resetFastSolveStreak(user.id);
-        toast.success('🎁 Bonus! You earned extra starter code for solving 3 problems fast!', { duration: 5000 });
-      }
-    };
-    
-    checkBonus();
-  }, [user?.id, alreadySolved, bonusApplied, editorLanguage]);
-
-  // Convert visible test cases to the format expected by TestCasePanel
-  const testCases: TestCase[] = problem?.visibleTestCases.map((tc, index) => ({
-    id: `tc-${index}`,
-    input: tc.input,
-    expected_output: tc.expectedOutput,
-    is_visible: true,
-    display_order: index,
-  })) || [];
+  }, [user?.id, problem, solved]);
 
   useEffect(() => {
-    if (!problem) {
-      toast.error('Problem not found');
-      navigate('/problems');
-      return;
+    if (problem && user?.id && code && !loading) {
+      const draftKey = `draft-${user.id}-${problem.id}-${editorLanguage}`;
+      localStorage.setItem(draftKey, code);
+
+      // Debounced cloud save could be here, but for now we'll rely on handleSave 
+      // or explicit save points to avoid spamming the DB
     }
-    setCode(problem.starterCode);
+  }, [code, user, problem, isDSAProblem, editorLanguage, loading]);
+
+  useEffect(() => {
+    if (!problem) { navigate('/problems'); return; }
     setLoading(false);
-    setSolved(false);
-    sessionStartedRef.current = false;
-    setBonusApplied(false);
   }, [slug, problem, navigate]);
 
-  // Load draft from localStorage
-  useEffect(() => {
-    if (problem && user) {
-      const draftKey = `draft-${user.id}-${problem.id}`;
-      const savedDraft = localStorage.getItem(draftKey);
-      if (savedDraft) {
-        setCode(savedDraft);
-      }
-    }
-  }, [problem, user]);
-
-  const triggerConfetti = () => {
-    const duration = 3000;
-    const end = Date.now() + duration;
-
-    const frame = () => {
-      confetti({
-        particleCount: 3,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0, y: 0.8 },
-        colors: ['#00D9FF', '#10B981', '#8B5CF6'],
-      });
-      confetti({
-        particleCount: 3,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1, y: 0.8 },
-        colors: ['#00D9FF', '#10B981', '#8B5CF6'],
-      });
-
-      if (Date.now() < end) {
-        requestAnimationFrame(frame);
-      }
-    };
-    frame();
-  };
-
   const saveProgressHandler = async (runtimeMs?: number) => {
-    if (!user || !problem) {
-      console.error('Cannot save progress: user or problem is missing');
-      return;
-    }
-
-    // End problem session and get duration
+    if (!user || !problem) return;
     const solveTime = await endProblemSession(user.id, true, runtimeMs);
-    sessionStartedRef.current = false;
-
-    // Record fast solve for bonus system
-    if (solveTime !== null) {
-      await recordFastSolve(user.id, solveTime);
-    }
-
+    if (solveTime !== null) await recordFastSolve(user.id, solveTime);
     const { saveProgress } = await import('@/lib/progressStorage');
-    const result = await saveProgress(user.id, problem.id, problem.difficulty, runtimeMs);
-    
-    if (!result.success) {
-      console.error('Failed to save progress:', result.error);
-    }
+    await saveProgress(user.id, problem.id, problem.difficulty, runtimeMs);
   };
-
-  const saveDraft = useCallback(() => {
-    if (!user || !problem) {
-      toast.error('Please sign in to save your draft');
-      return;
-    }
-    // Save draft with language suffix for DSA problems
-    const draftKey = isDSAProblem 
-      ? `draft-${user.id}-${problem.id}-${editorLanguage}`
-      : `draft-${user.id}-${problem.id}`;
-    localStorage.setItem(draftKey, code);
-    toast.success('Draft saved');
-  }, [user, problem, code, isDSAProblem, editorLanguage]);
 
   const runCode = async (submitAll = false) => {
-    if (!problem) return;
-
-    if (!user) {
-      toast.error('Please sign in to run code');
-      return;
-    }
-
-    if (submitAll) {
-      setSubmitting(true);
-    } else {
-      setRunning(true);
-    }
-    setResults(null);
-    setConsoleOutput('');
-    setLastError(null); // Clear previous errors
+    if (!problem || !user) return;
     setAttemptCount(prev => prev + 1);
 
-    try {
-      const testCasesToRun = submitAll 
-        ? [...problem.visibleTestCases, ...problem.hiddenTestCases]
-        : problem.visibleTestCases;
+    const testCasesToRun = submitAll ? [...problem.visibleTestCases, ...problem.hiddenTestCases] : problem.visibleTestCases;
+    const formattedTestCases = testCasesToRun.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput }));
 
-      const formattedTestCases = testCasesToRun.map(tc => ({
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-      }));
-
-      const { data, error } = await supabase.functions.invoke('execute-code', {
-        body: { code, testCases: formattedTestCases, language: editorLanguage },
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to execute code');
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setResults(data.results);
-      setConsoleOutput(data.consoleOutput || '');
-      
-      // Check for any errors in results
-      const errorResult = data.results.find((r: TestResult) => r.error);
-      if (errorResult) {
-        setLastError(errorResult.error);
-      }
-
-      const passedCount = data.results.filter((r: TestResult) => r.passed).length;
-      const totalCount = data.results.length;
-      const avgRuntime = data.results.reduce((sum: number, r: TestResult) => sum + (r.runtime_ms || 0), 0) / totalCount;
-      
-      // Detect topic for recommendations
-      const topic = learningRecommender.detectTopic(problem.category);
-
-      if (submitAll) {
-        if (passedCount === totalCount) {
-          setSolved(true);
-          triggerConfetti();
-          await saveProgressHandler(Math.round(avgRuntime));
-          toast.success(`🎉 Congratulations! All ${totalCount} test cases passed!`);
-          
-          // Trigger motivation messages
-          resetFailures(topic);
-          if (attemptCount > 3) {
-            showMotivation(user.id, { 
-              type: 'solve_after_failures', 
-              problemTitle: problem.title,
-              attemptCount: attemptCount,
-              topic
-            });
-          } else if (currentTime < 300) { // Under 5 minutes
-            showMotivation(user.id, {
-              type: 'fast_solve',
-              problemTitle: problem.title,
-              solveTime: currentTime,
-              topic
-            });
-          } else {
-            showMotivation(user.id, {
-              type: 'first_solve',
-              problemTitle: problem.title,
-              topic,
-              difficulty: problem.difficulty
-            });
-          }
-          
-          // Record successful attempt for learning recommender
-          learningRecommender.recordAttempt(user.id, {
-            topic,
-            difficulty: problem.difficulty,
-            attempts: attemptCount,
-            solveTime: currentTime,
-            expectedTime: problem.difficulty === 'easy' ? 600 : problem.difficulty === 'medium' ? 1200 : 2400,
-            isSuccess: true,
-            language: editorLanguage
-          });
-        } else {
-          toast.error(`${passedCount}/${totalCount} test cases passed`);
-          
-          // Trigger video recommendations after repeated failures
-          triggerVideoRecommendation(topic);
-          
-          // Record failed attempt
-          learningRecommender.recordAttempt(user.id, {
-            topic,
-            difficulty: problem.difficulty,
-            attempts: attemptCount,
-            solveTime: currentTime,
-            expectedTime: problem.difficulty === 'easy' ? 600 : problem.difficulty === 'medium' ? 1200 : 2400,
-            isSuccess: false,
-            language: editorLanguage
-          });
-        }
-      } else {
-        if (passedCount === totalCount) {
-          toast.success(`All visible test cases passed!`);
-        } else {
-          toast.info(`${passedCount}/${totalCount} visible test cases passed`);
-        }
-      }
-    } catch (error: unknown) {
-      console.error('Execution error:', error);
-      const message = error instanceof Error ? error.message : 'An error occurred';
-      toast.error(message);
-      setConsoleOutput(message);
-      setLastError(message); // Set error for Glitchy to react
-      
-      // Track failure for video recommendations
-      if (problem) {
+    await execute({
+      code,
+      language: editorLanguage,
+      testCases: formattedTestCases,
+      problemId: problem.id,
+      userId: user.id,
+      onSuccess: async (executionResults, avgRuntime) => {
+        const passedCount = executionResults.filter(r => r.passed).length;
+        const totalCount = executionResults.length;
         const topic = learningRecommender.detectTopic(problem.category);
-        triggerVideoRecommendation(topic);
+
+        if (submitAll) {
+          if (passedCount === totalCount) {
+            setSolved(true);
+            await saveProgressHandler(Math.round(avgRuntime));
+            toast.success('FLAWLESS VICTORY. Rank adjusted.');
+            resetFailures(topic);
+          } else {
+            toast.error(`Combat Result: ${passedCount} Hits, ${totalCount - passedCount} Misses.`);
+            triggerVideoRecommendation(topic);
+          }
+        }
       }
-    } finally {
-      setRunning(false);
-      setSubmitting(false);
-    }
+    }, submitAll);
   };
 
-  const goToNextProblem = () => {
-    if (nextProblem) {
+  const handleSave = useCallback(async () => {
+    if (problem && user?.id && code) {
+      const draftKey = `draft-${user.id}-${problem.id}-${editorLanguage}`;
+      localStorage.setItem(draftKey, code);
+
+      const { saveDraft } = await import('@/lib/progressStorage');
+      const result = await saveDraft(user.id, problem.id, code);
+
+      if (result.success) {
+        toast.success('Logic Uploaded to Mainframe. It\'s permanent now.');
+      } else {
+        toast.warning('Saved locally, but cloud sync failed');
+      }
+    }
+  }, [code, user, problem, editorLanguage]);
+
+  const handleHome = () => {
+    navigate('/');
+  };
+
+  const handleNextQuestion = useCallback(() => {
+    if (!problem) return;
+    const currentIndex = allProblemsData.findIndex(p => p.slug === problem.slug);
+    if (currentIndex !== -1 && currentIndex < allProblemsData.length - 1) {
+      const nextProblem = allProblemsData[currentIndex + 1];
       navigate(`/problem/${nextProblem.slug}`);
+    } else {
+      toast.info('Map Edge Reached. Turn back or choose a new zone.');
     }
-  };
+  }, [problem, navigate]);
 
-  const difficultyConfig = {
-    easy: { label: 'Easy', className: 'difficulty-easy' },
-    medium: { label: 'Medium', className: 'difficulty-medium' },
-    hard: { label: 'Hard', className: 'difficulty-hard' },
-  };
+  const handlePrevQuestion = useCallback(() => {
+    if (!problem) return;
+    const currentIndex = allProblemsData.findIndex(p => p.slug === problem.slug);
+    if (currentIndex > 0) {
+      const prevProblem = allProblemsData[currentIndex - 1];
+      navigate(`/problem/${prevProblem.slug}`);
+    } else {
+      toast.info('Map Edge Reached. Turn back or choose a new zone.');
+    }
+  }, [problem, navigate]);
 
-  if (loading) {
+  if (loading || !problem) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center bg-[#030712]">
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
       </div>
     );
   }
 
-  if (!problem) {
-    return null;
-  }
-
-  const config = difficultyConfig[problem.difficulty];
-
-  // No lives left - show blocked screen
   if (noLives && !alreadySolved) {
-    const timeRemaining = getTimeUntilNextRestore();
     return (
-      <div className="flex h-screen flex-col bg-background">
+      <div className="flex h-screen flex-col bg-[#030712]">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md mx-auto p-8">
-            <div className="flex justify-center mb-6">
-              {[0, 1, 2].map((i) => (
-                <Heart
-                  key={i}
-                  className="h-12 w-12 fill-muted text-muted-foreground/30 mx-1"
-                />
-              ))}
-            </div>
-            <h2 className="text-2xl font-bold text-destructive mb-4">No Lives Remaining</h2>
-            <p className="text-muted-foreground mb-6">
-              You've lost all your lives by leaving problem pages. Lives restore 10 minutes after being lost.
+            <h2 className="text-2xl font-bold text-rose-500 mb-4 uppercase tracking-[0.2em]">System Locked</h2>
+            <p className="text-slate-400 mb-6 font-mono text-sm leading-relaxed">
+              Neural synchronization lost due to repeated focus violations. Restoring connectivity...
             </p>
-            {timeRemaining && (
-              <div className="bg-muted rounded-lg p-4 mb-6">
-                <p className="text-sm text-muted-foreground">Next life restores in:</p>
-                <p className="text-2xl font-bold text-primary">{formatTimeRemaining(timeRemaining)}</p>
+            {formattedTimeRemaining && (
+              <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 mb-6">
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-bold">Estimated Restore Time</p>
+                <p className="text-4xl font-mono font-bold text-cyan-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                  {formattedTimeRemaining}
+                </p>
               </div>
             )}
-            <Button onClick={() => navigate('/learning-tracks')} variant="outline">
-              Return to Learning Tracks
+            <Button onClick={() => navigate('/learning-tracks')} variant="outline" className="border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 uppercase tracking-widest font-bold text-xs">
+              Return to Station
             </Button>
           </div>
         </div>
@@ -760,317 +310,104 @@ class Program {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
-      <Navbar />
+    <div className="flex h-screen flex-col bg-[#030712] overflow-hidden">
+      {/* <Navbar /> */}
 
-      {/* Already Solved Banner */}
-      {alreadySolved && (
-        <div className="bg-success/10 border-b border-success/30 px-4 py-3 text-center">
-          <p className="text-success font-medium flex items-center justify-center gap-2">
-            <CheckCircle2 className="h-5 w-5" />
-            You have already completed this problem! ✓
-            {nextProblem && (
-              <Button variant="link" onClick={goToNextProblem} className="text-success underline p-0 h-auto">
-                Try the next one →
-              </Button>
-            )}
-          </p>
-        </div>
-      )}
-
-      {/* Lives Display Banner */}
-      {!alreadySolved && (
-        <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            ⚠️ Leaving this page will cost you a life!
-          </span>
-          <LivesDisplay />
-        </div>
-      )}
-
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 relative overflow-hidden">
         <ResizablePanelGroup direction="horizontal">
-          {/* Problem Description Panel */}
-          <ResizablePanel
-            defaultSize={40}
-            minSize={showDescription ? 25 : 0}
-            maxSize={showDescription ? 60 : 0}
-            className={cn(!showDescription && 'hidden')}
-          >
+          {/* Pane A: Problem Description */}
+          <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
             <div className="flex h-full flex-col">
-              {/* Problem Header */}
-              <div className="border-b border-border p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h1 className="text-xl font-bold">{problem.title}</h1>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Badge variant="outline" className={cn('border', config.className)}>
-                        {config.label}
-                      </Badge>
-                      <Badge variant="secondary">{problem.category}</Badge>
-                      {solved && (
-                        <Badge className="bg-success text-success-foreground">Solved ✓</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/')}
-                    className="flex items-center gap-2"
-                  >
-                    <Home className="h-4 w-4" />
-                    <span className="hidden sm:inline">Home</span>
-                  </Button>
+              <ProblemDescriptionPane
+                problem={problem}
+                activeTab="description"
+                onHome={handleHome}
+              />
+              {!alreadySolved && (
+                <div className="p-4 border-t border-slate-800/50 bg-[#030712]">
+                  <CodeAnalysisPanel
+                    code={code}
+                    language={editorLanguage}
+                    problemSlug={problem.slug}
+                    problemTitle={problem.title}
+                    problemDifficulty={problem.difficulty}
+                    problemCategory={problem.category}
+                    attemptCount={attemptCount}
+                  />
                 </div>
-              </div>
-
-              {/* Problem Content */}
-              <ScrollArea className="flex-1">
-                <div className="space-y-6 p-4">
-                  {/* Problem Description */}
-                  <div>
-                    <h3 className="mb-2 font-semibold">Technical Details</h3>
-                    <div className="prose prose-invert max-w-none text-sm text-foreground">
-                      <p className="whitespace-pre-wrap text-muted-foreground">{problem.description}</p>
-                    </div>
-                  </div>
-
-                  {/* Input Format */}
-                  {problem.inputFormat && (
-                    <div>
-                      <h3 className="mb-2 font-semibold">Input Format</h3>
-                      <pre className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
-                        {problem.inputFormat}
-                      </pre>
-                    </div>
-                  )}
-
-                  {/* Output Format */}
-                  {problem.outputFormat && (
-                    <div>
-                      <h3 className="mb-2 font-semibold">Output Format</h3>
-                      <pre className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
-                        {problem.outputFormat}
-                      </pre>
-                    </div>
-                  )}
-
-                  {/* Constraints */}
-                  {problem.constraints && (
-                    <div>
-                      <h3 className="mb-2 font-semibold">Constraints</h3>
-                      <pre className="rounded-lg bg-muted p-3 text-sm whitespace-pre-wrap">
-                        {problem.constraints}
-                      </pre>
-                    </div>
-                  )}
-
-                  {/* Limits */}
-                  <div className="flex gap-4 text-sm text-muted-foreground">
-                    <span>Time Limit: {problem.timeLimitMs}ms</span>
-                    <span>Memory Limit: {problem.memoryLimitMb}MB</span>
-                  </div>
-
-                  {/* Examples */}
-                  <div>
-                    <h3 className="mb-3 font-semibold">Examples</h3>
-                    <div className="space-y-4">
-                      {testCases.slice(0, 3).map((tc, index) => (
-                        <div
-                          key={tc.id}
-                          className="rounded-lg border border-border bg-card p-4"
-                        >
-                          <div className="mb-2 text-sm font-medium text-muted-foreground">
-                            Example {index + 1}
-                          </div>
-                          <div className="space-y-3">
-                            <div>
-                              <div className="mb-1 text-xs font-medium text-muted-foreground">
-                                Input
-                              </div>
-                              <pre className="rounded bg-muted p-2 font-mono text-sm">
-                                {tc.input}
-                              </pre>
-                            </div>
-                            <div>
-                              <div className="mb-1 text-xs font-medium text-muted-foreground">
-                                Output
-                              </div>
-                              <pre className="rounded bg-muted p-2 font-mono text-sm">
-                                {tc.expected_output}
-                              </pre>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Real-time Code Analysis Panel */}
-                  {!alreadySolved && (
-                    <CodeAnalysisPanel
-                      code={code}
-                      language={editorLanguage}
-                      problemSlug={problem.slug}
-                      problemTitle={problem.title}
-                      problemDifficulty={problem.difficulty}
-                      problemCategory={problem.category}
-                      attemptCount={attemptCount}
-                    />
-                  )}
-                </div>
-              </ScrollArea>
+              )}
             </div>
           </ResizablePanel>
 
-          <ResizableHandle withHandle />
+          <ResizableHandle className="w-1 bg-slate-800/50 hover:bg-cyan-500/30 transition-colors" />
 
-          {/* Code Editor Panel */}
-          <ResizablePanel defaultSize={60} minSize={40}>
-            <ResizablePanelGroup direction="vertical">
-              {/* Editor */}
-              <ResizablePanel defaultSize={60} minSize={30}>
-                <div className="flex h-full flex-col">
-                  {/* Editor Header */}
-                  <div className="flex items-center justify-between border-b border-border px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowDescription(!showDescription)}
-                        className="rounded p-1 hover:bg-secondary"
-                      >
-                        {showDescription ? (
-                          <ChevronLeft className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </button>
-                      <LanguageSelector
-                        value={isDSAProblem ? (selectedLanguage || 'python') : defaultLanguage}
-                        onChange={setSelectedLanguage}
-                        disabled={alreadySolved}
-                        restrictedLanguage={isDSAProblem ? null : defaultLanguage}
-                      />
-                    </div>
-                    {/* Glitchy AI Assistant - positioned in header */}
-                    <div className="flex items-center gap-2">
-                      {!alreadySolved && problem && (
-                        <GlitchyAssistant
-                          code={code}
-                          language={editorLanguage}
-                          problemDescription={problem.description}
-                          lastError={lastError}
-                        />
-                      )}
-                    </div>
-                  </div>
+          {/* Pane B: Editor */}
+          <ResizablePanel defaultSize={50} minSize={30}>
+            <div className="h-full relative overflow-hidden">
+              <NeuralEditorPane
+                code={code}
+                setCode={setCode}
+                language={editorLanguage}
+                setLanguage={setSelectedLanguage}
+                isLanguageLocked={false}
+                onRun={() => runCode(false)}
+                onSubmit={() => runCode(true)}
+                onSave={handleSave}
+                onNext={handleNextQuestion}
+                onPrev={handlePrevQuestion}
+                onVisualize={() => setIsVisualizerOpen(true)}
+                running={running}
+                submitting={submitting}
+              />
 
-                  {/* Editor Content */}
-                  <div className="flex-1 relative">
-                    
-                    {alreadySolved && (
-                      <div className="absolute inset-0 z-10 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                        <div className="text-center">
-                          <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-3" />
-                          <p className="text-lg font-semibold text-success">Problem Completed!</p>
-                          <p className="text-sm text-muted-foreground mt-1">You've already solved this problem</p>
-                          {nextProblem && (
-                            <Button
-                              onClick={goToNextProblem}
-                              className="mt-4"
-                              variant="outline"
-                            >
-                              Try Next Problem
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <CodeEditor
-                      value={code}
-                      onChange={setCode}
-                      language={editorLanguage}
-                    />
-                  </div>
-
-                  {/* Editor Footer */}
-                  <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                    <span className="text-xs text-muted-foreground">
-                      {alreadySolved ? "This problem is already completed" : "Paste disabled — type your solution"}
-                    </span>
-                    <div className="flex gap-2">
-                      {alreadySolved ? (
-                        nextProblem && (
-                          <Button
-                            variant="outline"
-                            onClick={goToNextProblem}
-                            className="border-success text-success hover:bg-success/10"
-                          >
-                            Next Problem
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                          </Button>
-                        )
-                      ) : (
-                        <>
-                          {solved && nextProblem && (
-                            <Button
-                              variant="outline"
-                              onClick={goToNextProblem}
-                              className="border-success text-success hover:bg-success/10"
-                            >
-                              Next Problem
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            onClick={() => runCode(false)}
-                            disabled={running || submitting}
-                          >
-                            {running ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Play className="mr-2 h-4 w-4" />
-                            )}
-                            Run
-                          </Button>
-                          <Button
-                            variant="default"
-                            onClick={() => runCode(true)}
-                            disabled={running || submitting}
-                            className="bg-primary hover:bg-primary/90"
-                          >
-                            {submitting ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Send className="mr-2 h-4 w-4" />
-                            )}
-                            Submit
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-
-              {/* Test Results Panel */}
-              <ResizablePanel defaultSize={40} minSize={20}>
-                <TestCasePanel
-                  testCases={testCases}
-                  results={results || undefined}
-                  isRunning={running || submitting}
-                  consoleOutput={consoleOutput}
+              {/* Glitchy Assistant: Floating in bottom right of panel 2 */}
+              <div className="absolute bottom-12 right-6 z-30">
+                <GlitchyAssistant
+                  code={code}
+                  language={editorLanguage}
+                  problemDescription={problem.description}
+                  lastError={lastError}
                 />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+              </div>
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle className="w-1 bg-slate-800/50 hover:bg-cyan-500/30 transition-colors" />
+
+          {/* Pane C: Execution Stream */}
+          <ResizablePanel defaultSize={25} minSize={20}>
+            <ExecutionStreamPane
+              results={results}
+              consoleOutput={consoleOutput}
+              status={running ? 'running' : submitting ? 'running' : 'idle'}
+              testCases={problem.visibleTestCases.map(tc => ({
+                input: tc.input,
+                expected_output: tc.expectedOutput
+              }))}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
 
+      {/* Footer Navigation */}
+      <div className="h-8 bg-[#030712] border-t border-slate-800/50 px-4 flex items-center justify-between text-[10px] text-slate-600 font-bold tracking-widest uppercase shrink-0 z-10">
+        <div className="flex items-center gap-4">
+          <span className="hover:text-cyan-500 cursor-pointer transition-colors" onClick={() => navigate('/problems')}>Problems</span>
+          <span className="text-slate-800">/</span>
+          <span className="hover:text-cyan-500 cursor-pointer transition-colors" onClick={() => navigate(`/track/${problem.slug}`)}>{problem.category}</span>
+          <span className="text-slate-800">/</span>
+          <span className="text-slate-400 italic">{problem.title}</span>
+        </div>
+        <LivesDisplay />
+      </div>
+      {isVisualizerOpen && (
+        <CompilerVisualizerModal
+          isOpen={isVisualizerOpen}
+          onClose={() => setIsVisualizerOpen(false)}
+          initialCode={code}
+          language={editorLanguage}
+        />
+      )}
     </div>
   );
 }

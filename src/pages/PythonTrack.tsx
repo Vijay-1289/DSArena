@@ -9,14 +9,27 @@ import { pythonProblemsData, PYTHON_TRACK_TOTAL, getPythonCategories } from '@/l
 import { useAuth } from '@/lib/auth';
 import { fetchSolvedProblems } from '@/lib/progressStorage';
 import { LivesDisplay } from '@/components/lives/LivesDisplay';
-import { 
-  CheckCircle2, 
-  Trophy, 
-  Code, 
+import {
+  CheckCircle2,
+  Trophy,
+  Code,
   ChevronRight,
   ChevronDown,
   Sparkles,
-  GraduationCap
+  GraduationCap,
+  Zap,
+  Terminal,
+  Activity,
+  Cpu,
+  Layers,
+  Database,
+  Search,
+  Box,
+  Share2,
+  TreePine,
+  RotateCcw,
+  Hash,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -31,18 +44,18 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 
-// Category icons and colors mapping
-const categoryConfig: Record<string, { icon: string; color: string }> = {
-  'Python Core': { icon: '🐍', color: 'from-green-500 to-emerald-600' },
-  'Arrays/Lists': { icon: '📊', color: 'from-blue-500 to-cyan-600' },
-  'Strings': { icon: '🔤', color: 'from-purple-500 to-violet-600' },
-  'Searching & Sorting': { icon: '🔍', color: 'from-orange-500 to-amber-600' },
-  'Stack & Queue': { icon: '📦', color: 'from-pink-500 to-rose-600' },
-  'Linked List': { icon: '🔗', color: 'from-indigo-500 to-blue-600' },
-  'Trees': { icon: '🌳', color: 'from-green-600 to-teal-600' },
-  'Recursion & Backtracking': { icon: '🔁', color: 'from-red-500 to-orange-600' },
-  'Hashing': { icon: '🗂️', color: 'from-yellow-500 to-amber-600' },
-  'Must-Have Interview': { icon: '🎯', color: 'from-red-600 to-pink-600' },
+// Category icons and colors mapping - Updated for Cyber-Zen
+const categoryConfig: Record<string, { icon: any; color: string; accent: string }> = {
+  'Python Core': { icon: Cpu, color: 'from-emerald-500 to-cyan-600', accent: 'text-emerald-400' },
+  'Arrays/Lists': { icon: Layers, color: 'from-blue-500 to-cyan-600', accent: 'text-cyan-400' },
+  'Strings': { icon: Terminal, color: 'from-purple-500 to-violet-600', accent: 'text-violet-400' },
+  'Searching & Sorting': { icon: Search, color: 'from-orange-500 to-amber-600', accent: 'text-amber-400' },
+  'Stack & Queue': { icon: Box, color: 'from-pink-500 to-rose-600', accent: 'text-rose-400' },
+  'Linked List': { icon: Share2, color: 'from-indigo-500 to-blue-600', accent: 'text-blue-400' },
+  'Trees': { icon: TreePine, color: 'from-green-600 to-teal-600', accent: 'text-teal-400' },
+  'Recursion & Backtracking': { icon: RotateCcw, color: 'from-red-500 to-orange-600', accent: 'text-orange-400' },
+  'Hashing': { icon: Hash, color: 'from-yellow-500 to-amber-600', accent: 'text-yellow-400' },
+  'Must-Have Interview': { icon: Target, color: 'from-red-600 to-pink-600', accent: 'text-pink-400' },
 };
 
 export default function PythonTrack() {
@@ -68,7 +81,7 @@ export default function PythonTrack() {
   const problemsByCategory = categories.map(category => ({
     category,
     problems: pythonProblemsData.filter(p => p.category === category),
-    config: categoryConfig[category] || { icon: '📝', color: 'from-gray-500 to-slate-600' }
+    config: categoryConfig[category] || { icon: Database, color: 'from-gray-500 to-slate-600', accent: 'text-slate-400' }
   }));
 
   const toggleSection = (category: string) => {
@@ -91,273 +104,292 @@ export default function PythonTrack() {
     setExpandedSections(new Set());
   };
 
-  const renderProblemsByDifficulty = (problems: typeof pythonProblemsData, difficulty: 'easy' | 'medium' | 'hard', label: string, emoji: string) => {
-    const filteredProblems = problems.filter(p => p.difficulty === difficulty);
-    if (filteredProblems.length === 0) return null;
-
-    const sectionSolvedCount = filteredProblems.filter(p => solvedIds.has(p.id)).length;
-
+  const renderProblemMatrix = (problems: typeof pythonProblemsData) => {
     return (
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2 px-2">
-          <span className="text-lg">{emoji}</span>
-          <h4 className="text-sm font-semibold text-muted-foreground">{label}</h4>
-          <Badge variant="outline" className="text-[10px] ml-auto">
-            {sectionSolvedCount}/{filteredProblems.length}
-          </Badge>
-        </div>
-        <div className="grid gap-2">
-          {filteredProblems.map((problem) => {
-            const isSolved = solvedIds.has(problem.id);
-            
-            return (
-              <Link
-                key={problem.id}
-                to={isSolved ? '#' : `/problem/${problem.slug}`}
-                onClick={(e) => {
-                  if (isSolved) {
-                    e.preventDefault();
-                  }
-                }}
-                className={cn(
-                  "group flex items-center gap-3 rounded-lg border p-3 transition-all duration-200",
-                  isSolved 
-                    ? "border-success/30 bg-success/5 cursor-default" 
-                    : "border-border bg-card/50 hover:border-primary/50 hover:bg-card hover:shadow-md"
-                )}
-              >
-                <div className="flex-1 min-w-0">
-                  <h3 className={cn(
-                    "font-medium text-sm truncate transition-colors",
-                    isSolved ? "text-success" : "text-foreground group-hover:text-primary"
-                  )}>
-                    {problem.title}
-                  </h3>
-                </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {problems.map((problem) => {
+          const isSolved = solvedIds.has(problem.id);
+          const diffColor = problem.difficulty === 'easy' ? 'bg-emerald-500' : problem.difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500';
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {isSolved ? (
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  )}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+          return (
+            <Link
+              key={problem.id}
+              to={isSolved ? '#' : `/problem/${problem.slug}`}
+              onClick={(e) => {
+                if (isSolved) e.preventDefault();
+              }}
+              className={cn(
+                "group relative flex flex-col p-4 rounded-lg border transition-all duration-300",
+                isSolved
+                  ? "bg-emerald-500/10 border-emerald-500/30 cursor-default"
+                  : "bg-white/[0.03] border-white/5 hover:border-emerald-500/50 hover:bg-white/[0.06] hover:shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+              )}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className={cn("size-2 rounded-full shadow-[0_0_5px_currentColor]", diffColor)} />
+                {isSolved ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : (
+                  <Zap className="h-3.5 w-3.5 text-white/10 group-hover:text-emerald-500/50 transition-colors" />
+                )}
+              </div>
+
+              <h4 className={cn(
+                "text-sm font-bold tracking-tight mb-4 transition-colors",
+                isSolved ? "text-emerald-400" : "text-white/80 group-hover:text-white"
+              )}>
+                {problem.title}
+              </h4>
+
+              <div className="mt-auto flex items-center justify-between">
+                <span className="text-[10px] font-mono text-white/20 uppercase tracking-widest">{problem.difficulty}</span>
+                {!isSolved && (
+                  <span className="text-[10px] font-black uppercase text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity">Execute</span>
+                )}
+              </div>
+            </Link>
+          );
+        })}
       </div>
     );
   };
 
-  const renderCategorySection = (categoryData: typeof problemsByCategory[0], index: number) => {
+  const renderDataCartridge = (categoryData: typeof problemsByCategory[0], index: number) => {
     const { category, problems, config } = categoryData;
     const isExpanded = expandedSections.has(category);
     const categorySolvedCount = problems.filter(p => solvedIds.has(p.id)).length;
     const categoryProgress = (categorySolvedCount / problems.length) * 100;
-
-    const easyCount = problems.filter(p => p.difficulty === 'easy').length;
-    const mediumCount = problems.filter(p => p.difficulty === 'medium').length;
-    const hardCount = problems.filter(p => p.difficulty === 'hard').length;
 
     return (
       <Collapsible
         key={category}
         open={isExpanded}
         onOpenChange={() => toggleSection(category)}
-        className="mb-4"
+        className="mb-6"
       >
         <CollapsibleTrigger asChild>
           <div className={cn(
-            "w-full rounded-xl border cursor-pointer transition-all duration-200 hover:shadow-lg",
-            isExpanded ? "border-primary/50 bg-card" : "border-border bg-card/80 hover:border-primary/30"
+            "group relative w-full rounded-xl border cursor-pointer transition-all duration-300 overflow-hidden",
+            isExpanded ? "bg-[#0B1121] border-emerald-500/40 shadow-[0_0_30px_rgba(16,185,129,0.1)]" : "bg-white/[0.02] border-white/5 hover:border-white/20"
           )}>
-            <div className="p-4 sm:p-5">
-              <div className="flex items-center gap-3 sm:gap-4">
-                {/* Section number and icon */}
+            {/* Header Glass */}
+            <div className="p-5 flex items-center gap-6 relative z-10">
+              {/* Hex Icon Hub */}
+              <div className="relative">
                 <div className={cn(
-                  "flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-gradient-to-br text-2xl sm:text-3xl flex-shrink-0",
+                  "size-14 hex-mask bg-gradient-to-br flex items-center justify-center relative z-10 transition-transform group-hover:scale-110",
                   config.color
                 )}>
-                  {config.icon}
+                  <config.icon className="h-7 w-7 text-white" />
                 </div>
-
-                {/* Title and stats */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-muted-foreground font-mono">Section {index + 1}</span>
-                  </div>
-                  <h3 className="font-bold text-base sm:text-lg truncate">{category}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Progress value={categoryProgress} className="h-1.5 flex-1 max-w-[120px]" />
-                    <span className="text-xs text-muted-foreground">
-                      {categorySolvedCount}/{problems.length}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Difficulty breakdown */}
-                <div className="hidden sm:flex items-center gap-2">
-                  {easyCount > 0 && (
-                    <Badge variant="outline" className="text-[10px] border-success/50 text-success">
-                      🟢 {easyCount}
-                    </Badge>
-                  )}
-                  {mediumCount > 0 && (
-                    <Badge variant="outline" className="text-[10px] border-warning/50 text-warning">
-                      🟡 {mediumCount}
-                    </Badge>
-                  )}
-                  {hardCount > 0 && (
-                    <Badge variant="outline" className="text-[10px] border-destructive/50 text-destructive">
-                      🔴 {hardCount}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Expand icon */}
-                <ChevronDown className={cn(
-                  "h-5 w-5 text-muted-foreground transition-transform duration-200 flex-shrink-0",
-                  isExpanded && "rotate-180"
-                )} />
+                <div className={cn("absolute inset-0 blur-xl opacity-20 scale-150", config.color.split(' ')[0])} />
               </div>
+
+              {/* Identity & Progress */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1.5 pt-1">
+                  <span className="text-[10px] text-white/30 font-mono tracking-[0.2em] uppercase italic">Module 0{index + 1}</span>
+                  <div className="h-[1px] flex-1 bg-white/5" />
+                </div>
+                <h3 className="text-xl font-black italic tracking-tighter uppercase text-white group-hover:text-emerald-400 transition-colors">
+                  {category}
+                </h3>
+              </div>
+
+              {/* Tactical Stats */}
+              <div className="hidden md:flex flex-col items-end gap-2 pr-4">
+                <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-white/40 italic">
+                  <span>UNITS DECRYPTED:</span>
+                  <span className="text-white">{categorySolvedCount} / {problems.length}</span>
+                </div>
+                <div className="h-1.5 w-32 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                  <div
+                    className="h-full bg-emerald-500 shadow-[0_0_8px_#10b981] transition-all duration-1000"
+                    style={{ width: `${categoryProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              <ChevronDown className={cn(
+                "h-5 w-5 text-white/20 transition-transform duration-500",
+                isExpanded && "rotate-180 text-emerald-500"
+              )} />
             </div>
+
+            {/* Visual Glitch Bar */}
+            <div className={cn(
+              "absolute bottom-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity",
+              isExpanded ? "opacity-100 bg-emerald-500" : "bg-white/10"
+            )} />
           </div>
         </CollapsibleTrigger>
 
-        <CollapsibleContent className="pt-3 px-1">
-          <div className="rounded-xl border border-border bg-card/50 p-4">
-            {renderProblemsByDifficulty(problems, 'easy', 'Beginner', '🟢')}
-            {renderProblemsByDifficulty(problems, 'medium', 'Intermediate', '🟡')}
-            {renderProblemsByDifficulty(problems, 'hard', 'Advanced', '🔴')}
+        <CollapsibleContent className="pt-4 transition-all">
+          <div className="p-8 rounded-xl bg-black/40 border border-white/5 backdrop-blur-md">
+            <div className="flex items-center gap-3 mb-8 pb-4 border-b border-white/5">
+              <Activity className="h-4 w-4 text-emerald-500" />
+              <h5 className="text-[11px] font-black uppercase tracking-[0.3em] text-white/40 italic">Neural Matrix Grid // Deploy Sub-Protocols</h5>
+            </div>
+            {renderProblemMatrix(problems)}
           </div>
         </CollapsibleContent>
       </Collapsible>
     );
   };
 
-  // Overall stats
-  const totalEasy = pythonProblemsData.filter(p => p.difficulty === 'easy').length;
-  const totalMedium = pythonProblemsData.filter(p => p.difficulty === 'medium').length;
-  const totalHard = pythonProblemsData.filter(p => p.difficulty === 'hard').length;
-  const solvedEasy = pythonProblemsData.filter(p => p.difficulty === 'easy' && solvedIds.has(p.id)).length;
-  const solvedMedium = pythonProblemsData.filter(p => p.difficulty === 'medium' && solvedIds.has(p.id)).length;
-  const solvedHard = pythonProblemsData.filter(p => p.difficulty === 'hard' && solvedIds.has(p.id)).length;
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#030712] font-display text-white selection:bg-primary/30 relative overflow-x-hidden">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-4 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-            <Code className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
-            <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Python Learning Track
-            </h1>
-          </div>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto px-4">
-            Master Python programming through {PYTHON_TRACK_TOTAL} carefully curated challenges across {categories.length} categories.
-          </p>
-          
-          {/* Lives Display */}
-          <div className="flex justify-center mt-4">
-            <LivesDisplay showTimer />
-          </div>
-        </div>
+      {/* Decorative Overlays */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 -z-10 w-full h-[600px] bg-gradient-to-b from-emerald-500/10 via-transparent to-transparent blur-[120px] pointer-events-none opacity-50" />
+      <div className="fixed -bottom-48 -right-48 -z-10 size-96 bg-cyan-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-        {/* Progress Section */}
-        <div className="mb-6 sm:mb-8 rounded-lg sm:rounded-xl border border-border bg-card p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            <div className="flex-1 w-full">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs sm:text-sm font-medium text-muted-foreground">Track Progress</span>
-                <span className="text-xs sm:text-sm font-bold text-primary">
-                  {solvedCount} / {PYTHON_TRACK_TOTAL} Problems
-                </span>
-              </div>
-              <Progress value={progressPercent} className="h-2 sm:h-3" />
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                {isTrackComplete 
-                  ? "🎉 Congratulations! You've completed the entire Python Track!" 
-                  : `${PYTHON_TRACK_TOTAL - solvedCount} problems remaining to complete the track`}
+      <main className="max-w-7xl mx-auto px-6 py-10 pt-24">
+
+        {/* Header Section: The Neural core */}
+        <div className="relative mb-20 text-center py-20 overflow-hidden">
+          {/* Ouroboros Visual Backdrop */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
+            <div className="size-[500px] rounded-full border-[40px] border-emerald-500 animate-[spin_20s_linear_infinite]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[400px] rounded-full border-[2px] border-dashed border-emerald-500/50 animate-[spin_10s_linear_infinite_reverse]" />
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center gap-6">
+            <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 px-4 py-1.5 rounded-full mb-4">
+              <div className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-400 italic">Core Language: Initialized</span>
+            </div>
+            <div>
+              <h1 className="text-5xl md:text-8xl font-black italic tracking-tighter uppercase leading-[0.85] text-white drop-shadow-2xl">
+                The Python <span className="text-emerald-500">Core</span>
+              </h1>
+              <p className="text-lg md:text-xl text-white/40 mt-6 max-w-2xl mx-auto font-light tracking-wide italic lowercase">
+                Master the architectural patterns of AI and elite data science through {PYTHON_TRACK_TOTAL} sequential tactical units.
               </p>
             </div>
-            
-            {isTrackComplete ? (
-              <Button 
-                onClick={() => setShowCertificate(true)}
-                className="gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90 w-full sm:w-auto"
-              >
-                <Trophy className="w-4 h-4" />
-                View Certificate
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-xs sm:text-sm">Complete all to earn certificate</span>
+
+            <div className="mt-4">
+              <LivesDisplay showTimer />
+            </div>
+          </div>
+        </div>
+
+        {/* Tactical Progress HUD */}
+        <div className="cyber-card p-10 mb-16 bg-[#0B1121]/80 backdrop-blur-xl border-emerald-500/20">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="flex-1 w-full space-y-8">
+              <div className="flex items-center justify-between border-l-2 border-emerald-500 pl-4 py-1">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-white/30 font-black uppercase tracking-widest italic">Global Core Status</span>
+                  <h2 className="text-3xl font-black italic tracking-tighter uppercase text-white">
+                    {solvedCount} / {PYTHON_TRACK_TOTAL} <span className="text-emerald-500 opacity-50 font-mono text-xl">PARTS ONLINE</span>
+                  </h2>
+                </div>
+                {isTrackComplete && (
+                  <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30 text-[10px] font-black uppercase tracking-widest animate-pulse h-8 px-4">
+                    Track Synchronized
+                  </Badge>
+                )}
               </div>
-            )}
+
+              <div className="space-y-4">
+                <div className="h-6 w-full bg-white/5 rounded-lg border border-white/5 overflow-hidden p-1">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-600 to-cyan-500 rounded-md shadow-[0_0_15px_-3px_#10b981] transition-all duration-1000 relative"
+                    style={{ width: `${progressPercent}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 mix-blend-overlay animate-[shimmer_2s_infinite]" />
+                  </div>
+                </div>
+                <div className="flex justify-between text-[10px] font-mono font-bold text-white/30 uppercase tracking-[0.2em]">
+                  <span>Neutral Linkage: {progressPercent.toFixed(1)}%</span>
+                  <span>System Capacity: Nominal</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full lg:w-72 flex flex-col gap-4">
+              {isTrackComplete ? (
+                <button
+                  onClick={() => setShowCertificate(true)}
+                  className="w-full h-16 bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl flex items-center justify-center gap-3 text-xs font-black uppercase tracking-[0.3em] text-white shadow-xl shadow-yellow-900/20 group hover:scale-[1.02] transition-all active:scale-95 italic"
+                >
+                  <Trophy className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                  Claim Certification
+                </button>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-16 border-2 border-dashed border-white/5 rounded-xl bg-white/[0.02]">
+                  <GraduationCap className="w-5 h-5 text-white/10 mb-1" />
+                  <span className="text-[9px] font-black uppercase tracking-widest text-white/20 italic">Synchronize all core parts to unlock</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Overall Stats */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
-          <div className="rounded-lg sm:rounded-xl border border-border bg-card p-3 sm:p-4 text-center">
-            <span className="text-xl sm:text-2xl">🟢</span>
-            <p className="text-lg sm:text-2xl font-bold text-success mt-1">{solvedEasy}/{totalEasy}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Beginner</p>
+        {/* Global Controls */}
+        <div className="flex items-center justify-between mb-10 pb-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <Terminal className="h-4 w-4 text-emerald-500" />
+            <h2 className="text-sm font-black uppercase tracking-[0.4em] text-white/40 italic">System Syllabus</h2>
           </div>
-          <div className="rounded-lg sm:rounded-xl border border-border bg-card p-3 sm:p-4 text-center">
-            <span className="text-xl sm:text-2xl">🟡</span>
-            <p className="text-lg sm:text-2xl font-bold text-warning mt-1">{solvedMedium}/{totalMedium}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Intermediate</p>
-          </div>
-          <div className="rounded-lg sm:rounded-xl border border-border bg-card p-3 sm:p-4 text-center">
-            <span className="text-xl sm:text-2xl">🔴</span>
-            <p className="text-lg sm:text-2xl font-bold text-destructive mt-1">{solvedHard}/{totalHard}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Advanced</p>
+          <div className="flex gap-4">
+            <button onClick={expandAll} className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-emerald-500 transition-colors italic">Load All</button>
+            <div className="h-3 w-[1px] bg-white/10" />
+            <button onClick={collapseAll} className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-emerald-500 transition-colors italic">Purge Buffer</button>
           </div>
         </div>
 
-        {/* Expand/Collapse Controls */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-xl font-bold">Problem Categories</h2>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={expandAll} className="text-xs">
-              Expand All
-            </Button>
-            <Button variant="outline" size="sm" onClick={collapseAll} className="text-xs">
-              Collapse All
-            </Button>
-          </div>
+        {/* Category Data Cartridges */}
+        <div className="space-y-4 mb-32">
+          {problemsByCategory.map((categoryData, index) => renderDataCartridge(categoryData, index))}
         </div>
-
-        {/* Category Sections */}
-        {problemsByCategory.map((categoryData, index) => renderCategorySection(categoryData, index))}
 
         {/* Certificate Dialog */}
         <Dialog open={showCertificate} onOpenChange={setShowCertificate}>
-          <DialogContent className="max-w-[95vw] sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Your Certificate
+          <DialogContent className="max-w-[95vw] sm:max-w-3xl bg-[#030712] border-white/10 p-0 overflow-hidden">
+            <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
+            <DialogHeader className="p-6 border-b border-white/5 relative z-10">
+              <DialogTitle className="flex items-center gap-3 text-white tracking-widest uppercase font-black italic">
+                <Sparkles className="w-5 h-5 text-yellow-500" />
+                Track Certification Authorized
               </DialogTitle>
             </DialogHeader>
-            <CompletionCertificate
-              completionDate={new Date().toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-              trackName="Python Learning Track"
-              totalProblems={PYTHON_TRACK_TOTAL}
-            />
+            <div className="p-8 relative z-10 bg-white/[0.02]">
+              <CompletionCertificate
+                completionDate={new Date().toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+                trackName="Python Learning Track"
+                totalProblems={PYTHON_TRACK_TOTAL}
+              />
+            </div>
           </DialogContent>
         </Dialog>
       </main>
+
+      {/* Footer Substrate */}
+      <footer className="relative z-10 w-full px-10 py-16 border-t border-white/5 bg-black/40 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
+          <div className="space-y-2">
+            <h4 className="text-xl font-black italic tracking-tighter uppercase text-white/80">Neural Python Core</h4>
+            <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-mono">© 2541 DSArena Orbital Research Unit // Encrypted</p>
+          </div>
+          <div className="flex gap-12">
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Latency</span>
+              <span className="text-xs font-mono text-emerald-500">0.02ms</span>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="text-[9px] uppercase tracking-widest text-white/20 font-bold">Sync Protocol</span>
+              <span className="text-xs font-mono text-cyan-500">Active</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

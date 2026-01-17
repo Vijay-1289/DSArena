@@ -1,8 +1,228 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .radial-glow {
+    background: radial-gradient(circle at center, rgba(124, 58, 237, 0.15) 0%, rgba(5, 5, 10, 0) 70%);
+  }
+
+  .cyber-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    @apply transition-all duration-300;
+  }
+
+  .cyber-input:focus {
+    outline: none;
+    border-bottom: 1px solid #06B6D4;
+    box-shadow: 0 4px 12px -6px rgba(6, 182, 212, 0.5);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .neon-button {
+    @apply transition-all duration-300;
+  }
+
+  .neon-button:hover {
+    box-shadow: 0 0 20px rgba(124, 59, 237, 0.6);
+    transform: translateY(-1px);
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .holographic-glow-cyan {
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.4));
+  }
+
+  .holographic-glow-violet {
+    filter: drop-shadow(0 0 8px rgba(124, 59, 237, 0.4));
+  }
+
+  .mesh-bg {
+    background-image:
+      radial-gradient(at 0% 0%, rgba(124, 59, 237, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(34, 211, 238, 0.05) 0px, transparent 50%);
+  }
+
+  .sheen-btn {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sheen-btn::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: rotate(45deg);
+    transition: 0.5s;
+  }
+
+  .sheen-btn:hover::after {
+    left: 100%;
+    top: 100%;
+  }
+
+  .orbital-path {
+    position: absolute;
+    border: 1px solid rgba(7, 192, 213, 0.1);
+    border-radius: 100%;
+    pointer-events: none;
+  }
+
+  .glass-orb {
+    backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    @apply transition-all duration-500 ease-out;
+  }
+
+  .glass-orb:hover {
+    transform: scale(1.1) translateY(-10px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(7, 192, 213, 0.5);
+    box-shadow: 0 0 40px rgba(7, 192, 213, 0.2);
+  }
+
+  .mastered-glow {
+    box-shadow: 0 0 30px rgba(7, 192, 213, 0.4), 0 0 60px rgba(124, 58, 237, 0.2);
+    border-color: #07c0d5 !important;
+  }
+
+  .star-field {
+    background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.05) 1px, transparent 0);
+    background-size: 40px 40px;
+  }
+
+  .glass-chip {
+    background: rgba(124, 58, 237, 0.05);
+    /* violet-glow/primary equivalent */
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    @apply transition-all duration-200 ease-in-out;
+  }
+
+  .glass-chip:hover {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: rgba(124, 58, 237, 0.4);
+  }
+
+  .active-chip-violet {
+    background: rgba(124, 58, 237, 0.2);
+    border-color: #7c3bed;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.3);
+  }
+
+  .active-chip-cyan {
+    background: rgba(6, 182, 212, 0.1);
+    /* cyber-cyan */
+    border-color: #06b6d4;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+  }
+
+  .table-row-hover:hover {
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.05) 0%, rgba(5, 5, 10, 0) 100%);
+    box-shadow: inset 4px 0 0 #7c3bed;
+  }
+
+  .glow-dot {
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .thin-border {
+    border-width: 0.5px;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-gap: 1.5rem;
+  }
+
+  .cyber-card {
+    background: #0B1121;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0.75rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cyber-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124, 58, 237, 0.3), transparent);
+  }
+
+  .rank-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    background: rgba(124, 58, 237, 0.1);
+    color: #7c3bed;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+  }
+
+  .hex-mask {
+    clip-path: polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%);
+  }
+
+  .terminal-field {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+    color: white;
+    transition: all 0.2s;
+  }
+
+  .terminal-field:focus {
+    border-color: #7c3bed;
+    background: rgba(124, 58, 237, 0.05);
+    outline: none;
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.1);
+  }
+
+  .glitch-banner {
+    background-image: linear-gradient(rgba(124, 58, 237, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124, 58, 237, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+}
 
 @layer base {
   :root {
@@ -15,7 +235,7 @@
     --popover: 222 47% 8%;
     --popover-foreground: 210 40% 96%;
 
-    --primary: 173 80% 45%;
+    --primary: 262 83% 58%;
     --primary-foreground: 222 47% 6%;
 
     --secondary: 222 30% 15%;
@@ -88,7 +308,9 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
 
-  code, pre, .font-mono {
+  code,
+  pre,
+  .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
 }
@@ -185,6 +407,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -195,6 +418,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -206,6 +430,7 @@
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -213,18 +438,24 @@
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 20px hsl(173 80% 45% / 0.3);
   }
+
   50% {
     box-shadow: 0 0 40px hsl(173 80% 45% / 0.5);
   }
 }
 
 @keyframes wiggle {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: rotate(-3deg);
   }
+
   50% {
     transform: rotate(3deg);
   }
@@ -236,9 +467,12 @@
 
 /* Glitchy Assistant Animations */
 @keyframes glitchy-idle {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-2px);
   }
@@ -248,48 +482,70 @@
   0% {
     transform: translateY(8px) scale(0.95);
   }
+
   50% {
     transform: translateY(-4px) scale(1.02);
   }
+
   100% {
     transform: translateY(0) scale(1);
   }
 }
 
 @keyframes glitchy-alert {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateX(0) rotate(0deg);
   }
-  10%, 30%, 50%, 70%, 90% {
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-2px) rotate(-2deg);
   }
-  20%, 40%, 60%, 80% {
+
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(2px) rotate(2deg);
   }
 }
 
 @keyframes glitchy-think {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
+
   25% {
     transform: translateY(-3px) rotate(-3deg);
   }
+
   75% {
     transform: translateY(-3px) rotate(3deg);
   }
 }
 
 @keyframes glitchy-happy {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1) translateY(0);
   }
+
   25% {
     transform: scale(1.05) translateY(-4px);
   }
+
   50% {
     transform: scale(1) translateY(-2px);
   }
+
   75% {
     transform: scale(1.03) translateY(-4px);
   }

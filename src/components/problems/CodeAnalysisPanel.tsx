@@ -31,8 +31,8 @@ interface AnalysisResult {
 const countMeaningfulLines = (code: string): number => {
   return code.split('\n').filter(l => {
     const trimmed = l.trim();
-    return trimmed && 
-      !trimmed.startsWith('#') && 
+    return trimmed &&
+      !trimmed.startsWith('#') &&
       !trimmed.startsWith('//') &&
       !trimmed.startsWith('/*') &&
       !trimmed.startsWith('*') &&
@@ -65,10 +65,9 @@ export function CodeAnalysisPanel({
     }
 
     const meaningfulLines = countMeaningfulLines(codeToAnalyze);
-    
+
     // Need at least 5 meaningful lines
     if (meaningfulLines < 5) {
-      console.log('CodeAnalysisPanel: Not enough meaningful lines:', meaningfulLines);
       setAnalysis(null);
       setLoading(false);
       return;
@@ -76,11 +75,9 @@ export function CodeAnalysisPanel({
 
     // Skip if same code was already analyzed
     if (codeToAnalyze === lastAnalyzedCodeRef.current) {
-      console.log('CodeAnalysisPanel: Code unchanged, skipping');
       return;
     }
 
-    console.log('CodeAnalysisPanel: Starting analysis for', problemSlug, 'with', meaningfulLines, 'lines');
     setLoading(true);
     setError(null);
 
@@ -105,7 +102,6 @@ export function CodeAnalysisPanel({
       });
 
       if (controller.signal.aborted) {
-        console.log('CodeAnalysisPanel: Request was aborted');
         return;
       }
 
@@ -114,7 +110,6 @@ export function CodeAnalysisPanel({
         setError('Analysis failed');
         setAnalysis(null);
       } else if (data) {
-        console.log('CodeAnalysisPanel: Analysis complete:', data);
         setAnalysis(data);
         lastAnalyzedCodeRef.current = codeToAnalyze;
       }
@@ -138,7 +133,7 @@ export function CodeAnalysisPanel({
     }
 
     const meaningfulLines = countMeaningfulLines(code);
-    
+
     // Not enough code yet
     if (meaningfulLines < 5) {
       setAnalysis(null);
@@ -287,7 +282,7 @@ export function CodeAnalysisPanel({
           {analysis.hint && (
             <p className="text-xs text-foreground leading-relaxed">{analysis.hint}</p>
           )}
-          
+
           <div className="flex flex-wrap gap-1">
             <Badge variant="outline" className="text-xs">
               <Zap className="h-3 w-3 mr-1" />
@@ -301,8 +296,8 @@ export function CodeAnalysisPanel({
           {analysis.patterns.length > 0 && (
             <div className="space-y-1">
               {analysis.patterns.slice(0, 3).map((p, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className={cn(
                     "text-xs p-2 rounded-md",
                     p.severity === 'warning' && "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",

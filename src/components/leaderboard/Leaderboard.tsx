@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,46 +33,10 @@ export function Leaderboard({ className }: LeaderboardProps) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily');
 
-  useEffect(() => {
-    fetchLeaderboards();
-    
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('leaderboard-updates')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'user_solved' },
-        () => fetchLeaderboards()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchLeaderboards = async () => {
-    setLoading(true);
-    
-    try {
-      const [daily, weekly] = await Promise.all([
-        fetchLeaderboard('daily'),
-        fetchLeaderboard('weekly'),
-      ]);
-      
-      setDailyLeaders(daily);
-      setWeeklyLeaders(weekly);
-    } catch (error) {
-      console.error('Failed to fetch leaderboards:', error);
-    }
-    
-    setLoading(false);
-  };
-
-  const fetchLeaderboard = async (period: 'daily' | 'weekly'): Promise<LeaderboardEntry[]> => {
+  const fetchLeaderboard = useCallback(async (period: 'daily' | 'weekly'): Promise<LeaderboardEntry[]> => {
     const now = new Date();
     let startDate: Date;
-    
+
     if (period === 'daily') {
       startDate = new Date(now);
       startDate.setHours(0, 0, 0, 0);
@@ -122,7 +86,7 @@ export function Leaderboard({ className }: LeaderboardProps) {
     const { data: achievements } = await supabase
       .from('leaderboard_achievements')
       .select('user_id, tag_type')
-      .in('user_id', userIds) as { data: any[] | null; error: any };
+      .in('user_id', userIds) as { data: { user_id: string; tag_type: string }[] | null; error: unknown };
 
     const achievementsByUser: Record<string, string[]> = {};
     for (const ach of achievements || []) {
@@ -158,7 +122,43 @@ export function Leaderboard({ className }: LeaderboardProps) {
     });
 
     return entries.slice(0, 10);
-  };
+  }, []);
+
+  const fetchLeaderboards = useCallback(async () => {
+    setLoading(true);
+
+    try {
+      const [daily, weekly] = await Promise.all([
+        fetchLeaderboard('daily'),
+        fetchLeaderboard('weekly'),
+      ]);
+
+      setDailyLeaders(daily);
+      setWeeklyLeaders(weekly);
+    } catch (error) {
+      console.error('Failed to fetch leaderboards:', error);
+    }
+
+    setLoading(false);
+  }, [fetchLeaderboard]);
+
+  useEffect(() => {
+    fetchLeaderboards();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('leaderboard-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user_solved' },
+        () => fetchLeaderboards()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchLeaderboards]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -188,12 +188,12 @@ export function Leaderboard({ className }: LeaderboardProps) {
       <div className="flex-shrink-0 w-8">
         {getRankIcon(entry.rank)}
       </div>
-      
+
       <Avatar className="h-8 w-8">
         <AvatarImage src={entry.avatarUrl || undefined} />
         <AvatarFallback>{entry.displayName.charAt(0).toUpperCase()}</AvatarFallback>
       </Avatar>
-      
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className={cn('font-medium truncate', isCurrentUser && 'text-primary')}>
@@ -204,7 +204,7 @@ export function Leaderboard({ className }: LeaderboardProps) {
             <AchievementBadge key={ach} tagType={ach as keyof typeof ACHIEVEMENT_TAGS} size="sm" />
           ))}
         </div>
-        
+
         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
           <span className="flex items-center gap-1">
             <Trophy className="h-3 w-3" />
@@ -218,7 +218,7 @@ export function Leaderboard({ className }: LeaderboardProps) {
           )}
         </div>
       </div>
-      
+
       <div className="text-right">
         <div className="flex items-center gap-1 text-sm font-semibold">
           <Zap className="h-3 w-3 text-primary" />
@@ -255,7 +255,7 @@ export function Leaderboard({ className }: LeaderboardProps) {
 
     return (
       <div className="space-y-2">
-        {leaders.map((entry) => 
+        {leaders.map((entry) =>
           renderLeaderboardEntry(entry, entry.userId === user?.id)
         )}
       </div>
@@ -282,16 +282,16 @@ export function Leaderboard({ className }: LeaderboardProps) {
               Weekly
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="daily">
             {renderLeaderboard(dailyLeaders)}
           </TabsContent>
-          
+
           <TabsContent value="weekly">
             {renderLeaderboard(weeklyLeaders)}
           </TabsContent>
         </Tabs>
-        
+
         {/* Achievement Tags Legend */}
         <div className="mt-4 pt-4 border-t">
           <p className="text-xs text-muted-foreground mb-2">Earn unique badges:</p>

@@ -1,0 +1,20 @@
+﻿
+D:\DSArena\DSArena\src\features\admin\hooks\useMasterAdminLogic.ts
+  33:13  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  45:13  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  47:35  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  50:35  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  77:18  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  96:35  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  97:58  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\features\host\hooks\useHostDashboardLogic.ts
+  109:130  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:53   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  185:49   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  329:23   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  358:23   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 12 problems (11 errors, 1 warning)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

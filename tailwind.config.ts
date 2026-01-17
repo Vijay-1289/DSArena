@@ -1,8 +1,27 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./src/components/ui/**/*.{ts,tsx}",
+    "./src/components/exam/**/*.{ts,tsx}",
+    "./src/components/editor/**/*.{ts,tsx}",
+    "./src/components/arena/**/*.{ts,tsx}",
+    "./src/components/assistant/**/*.{ts,tsx}",
+    "./src/components/auth/**/*.{ts,tsx}",
+    "./src/components/certificate/**/*.{ts,tsx}",
+    "./src/components/dashboard/**/*.{ts,tsx}",
+    "./src/components/layout/**/*.{ts,tsx}",
+    "./src/components/leaderboard/**/*.{ts,tsx}",
+    "./src/components/lives/**/*.{ts,tsx}",
+    "./src/components/problems/**/*.{ts,tsx}",
+    "./src/components/NavLink.tsx",
+    "./src/features/**/*.{ts,tsx}",
+    "./src/pages/**/*.{ts,tsx}",
+    "./src/App.tsx",
+    "./src/main.tsx"
+  ],
   prefix: "",
   theme: {
     container: {
@@ -16,6 +35,8 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        display: ['Space Grotesk', 'sans-serif'],
+        space: ["Space Grotesk", 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -27,6 +48,9 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        "background-light": "#f7f6f8",
+        "background-dark": "#05050A",
+        "cyber-cyan": "#06B6D4",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -34,14 +58,6 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
-        },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
-        },
-        warning: {
-          DEFAULT: "hsl(var(--warning))",
-          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -59,6 +75,17 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        success: "#22c55e",
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        zen: {
+          bg: "var(--zen-bg)",
+          card: "var(--zen-card)",
+          purple: "var(--zen-purple)",
+          cyan: "var(--zen-cyan)",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -68,17 +95,6 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
-        },
-        easy: "hsl(var(--easy))",
-        medium: "hsl(var(--medium))",
-        hard: "hsl(var(--hard))",
-        syntax: {
-          keyword: "hsl(var(--syntax-keyword))",
-          string: "hsl(var(--syntax-string))",
-          number: "hsl(var(--syntax-number))",
-          function: "hsl(var(--syntax-function))",
-          comment: "hsl(var(--syntax-comment))",
-          variable: "hsl(var(--syntax-variable))",
         },
       },
       borderRadius: {
@@ -111,6 +127,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(173 80% 45% / 0.3)" },
           "50%": { boxShadow: "0 0 40px hsl(173 80% 45% / 0.5)" },
         },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -119,6 +139,7 @@ export default {
         "slide-up": "slide-up 0.5s ease-out forwards",
         "scale-in": "scale-in 0.3s ease-out forwards",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        float: "float 6s ease-in-out infinite",
       },
       backgroundImage: {
         "gradient-primary": "linear-gradient(135deg, hsl(173 80% 45%) 0%, hsl(199 95% 55%) 100%)",
@@ -132,5 +153,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

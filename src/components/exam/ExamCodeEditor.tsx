@@ -1,59 +1,58 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Play, Loader2, CheckCircle, XCircle, Save } from 'lucide-react';
+import { Play, Rocket, ChevronLeft, ChevronRight, Settings, Maximize2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getMonacoLanguage, ExamLanguage } from '@/lib/examUtils';
-import { supabase } from '@/integrations/supabase/client';
-
-interface TestResult {
-  passed: boolean;
-  actual_output?: string;
-  expected_output?: string;
-  error?: string;
-  runtime_ms?: number;
-}
+import { cn } from '@/lib/utils';
 
 interface ExamCodeEditorProps {
   language: ExamLanguage;
   code: string;
   onChange: (code: string) => void;
-  testCases: { input: string; expectedOutput: string }[];
-  hiddenTestCases: { input: string; expectedOutput: string }[];
-  onRunComplete: (questionIndex: number, results: TestResult[], allPassed: boolean, compilationErrors: number, runtimeErrors: number) => void;
+  onRunCode: () => void;
+  onFinalize: () => void;
   questionIndex: number;
   onSave?: (code: string) => Promise<void>;
+  canSubmit: boolean;
+  isSubmitting: boolean;
+  isCompiling: boolean;
+  questionStatuses: ('unanswered' | 'attempted' | 'completed')[];
+  onPrevious: () => void;
+  onNext: () => void;
+  totalQuestions: number;
   disabled?: boolean;
-  forcePass?: boolean; // If true, always show 100% pass without running actual code
 }
+
+const LANGUAGE_LOGOS: Record<string, string> = {
+  python: "https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg",
+  javascript: "https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png",
+  java: "https://upload.wikimedia.org/wikipedia/en/3/30/Java_programming_language_logo.svg",
+  cpp: "https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg",
+};
 
 export function ExamCodeEditor({
   language,
   code,
   onChange,
-  testCases,
-  hiddenTestCases,
-  onRunComplete,
+  onRunCode,
+  onFinalize,
   questionIndex,
   onSave,
+  canSubmit,
+  isSubmitting,
+  isCompiling,
+  questionStatuses,
+  onPrevious,
+  onNext,
+  totalQuestions,
   disabled = false,
-  forcePass = false,
 }: ExamCodeEditorProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isRunningRef = useRef(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [results, setResults] = useState<TestResult[]>([]);
-  const [consoleOutput, setConsoleOutput] = useState('');
 
   const handleEditorMount: OnMount = (editor) => {
     editorRef.current = editor;
 
     // Disable paste
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editor.onKeyDown((e: any) => {
       if ((e.ctrlKey || e.metaKey) && e.keyCode === 52) { // KeyV
         e.preventDefault();
@@ -70,7 +69,28 @@ export function ExamCodeEditor({
       automaticLayout: true,
       tabSize: 4,
       wordWrap: 'on',
+      theme: 'vs-dark',
+      fontFamily: 'JetBrains Mono',
+      folding: true,
+      foldingHighlight: true,
+      foldingStrategy: 'indentation',
     });
+
+    // 1. Define the One-Shot Fold Logic
+    const performInitialFold = () => {
+      setTimeout(() => {
+        editor.getAction('editor.foldAllMarkerRegions')?.run();
+      }, 500); // 500ms delay to ensure tokenization
+    };
+
+    // 2. Trigger for Initial Load
+    const changeListener = editor.onDidChangeModelContent(() => {
+      performInitialFold();
+      changeListener.dispose();
+    });
+
+    // 3. Fallback
+    performInitialFold();
   };
 
   // Block paste at DOM level
@@ -87,192 +107,58 @@ export function ExamCodeEditor({
     return () => document.removeEventListener('paste', handlePaste, true);
   }, []);
 
-  // Reset results when question changes
+  // Re-trigger folding when problem or code changes
   useEffect(() => {
-    setResults([]);
-    setConsoleOutput('');
-  }, [questionIndex]);
-
-  const runCode = useCallback(async () => {
-    // Triple-layer race condition prevention:
-    // 1. Check ref first (synchronous, no React state delay)
-    if (isRunningRef.current || disabled) return;
-
-    // 2. Abort any previous in-flight request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+    if (editorRef.current && (code.includes('#region') || code.includes('# region'))) {
+      const fold = () => editorRef.current.getAction('editor.foldAllMarkerRegions')?.run();
+      setTimeout(fold, 100);
+      setTimeout(fold, 400);
+      setTimeout(fold, 800);
     }
+  }, [code, language, questionIndex]);
 
-    // 3. Create new abort controller for this request
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    // Set running flag immediately (ref first, then state)
-    isRunningRef.current = true;
-    setIsRunning(true);
-    setResults([]);
-    setConsoleOutput('');
-
-    // If forcePass is true, simulate 100% pass without running actual code
-    if (forcePass) {
-      const allTestCases = [...testCases, ...hiddenTestCases];
-      const fakeResults: TestResult[] = allTestCases.map((tc, index) => ({
-        passed: true,
-        actual_output: tc.expectedOutput,
-        expected_output: tc.expectedOutput,
-        runtime_ms: Math.floor(Math.random() * 50) + 10, // Random 10-60ms
-      }));
-
-      setResults(fakeResults);
-      setConsoleOutput('All test cases passed successfully!');
-      onRunComplete(questionIndex, fakeResults, true, 0, 0);
-      toast.success('All test cases passed!');
-      setIsRunning(false);
-      return;
-    }
-
-    try {
-      // Combine visible and hidden test cases - use camelCase to match edge function
-      const allTestCases = [
-        ...testCases.map((tc) => ({
-          input: tc.input,
-          expectedOutput: tc.expectedOutput,
-        })),
-        ...hiddenTestCases.map((tc) => ({
-          input: tc.input,
-          expectedOutput: tc.expectedOutput,
-        })),
-      ];
-
-      const { data, error } = await supabase.functions.invoke('execute-code', {
-        body: {
-          code,
-          language,
-          testCases: allTestCases,
-        },
-      });
-
-      // Check if this request was cancelled while in-flight
-      if (controller.signal.aborted) {
-        console.log('Request was cancelled, skipping state update');
-        return;
-      }
-
-      if (error) {
-        toast.error('Failed to run code', { description: error.message });
-        setConsoleOutput(`Error: ${error.message}`);
-        onRunComplete(questionIndex, [], false, 1, 0);
-        return;
-      }
-
-      const testResults: TestResult[] = data.results || [];
-      setResults(testResults);
-      setConsoleOutput(data.consoleOutput || '');
-
-      const allPassed = testResults.every((r) => r.passed);
-      const compilationErrors = testResults.filter((r) => r.error?.includes('compile') || r.error?.includes('syntax')).length;
-      const runtimeErrors = testResults.filter((r) => r.error && !r.error.includes('compile') && !r.error.includes('syntax')).length;
-
-      onRunComplete(questionIndex, testResults, allPassed, compilationErrors, runtimeErrors);
-
-      if (allPassed) {
-        toast.success('All test cases passed!');
-      } else {
-        const passed = testResults.filter((r) => r.passed).length;
-        toast.info(`${passed}/${testResults.length} test cases passed`);
-      }
-    } catch (err) {
-      // Check if error is due to abort
-      if (controller.signal.aborted) {
-        console.log('Request cancelled');
-        return;
-      }
-      console.error('Run error:', err);
-      toast.error('Failed to execute code');
-      onRunComplete(questionIndex, [], false, 1, 0);
-    } finally {
-      // Only clear running flag if request wasn't aborted
-      if (!controller.signal.aborted) {
-        isRunningRef.current = false;
-        setIsRunning(false);
-      }
-
-      // Clear the ref if this was the active controller
-      if (abortControllerRef.current === controller) {
-        abortControllerRef.current = null;
-      }
-    }
-  }, [code, language, testCases, hiddenTestCases, onRunComplete, questionIndex, isRunning, disabled, forcePass]);
-
-  const handleSave = useCallback(async () => {
-    if (isSaving || !onSave) return;
-    setIsSaving(true);
-    try {
-      await onSave(code);
-      toast.success('Code saved successfully!');
-    } catch (err) {
-      console.error('Save error:', err);
-      toast.error('Failed to save code');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [code, onSave, isSaving]);
-
-  const passedCount = results.filter((r) => r.passed).length;
-  const totalCount = results.length;
+  const fileName = language === 'python' ? 'main.py' :
+    language === 'javascript' ? 'solution.js' :
+      language === 'java' ? 'Solution.java' : 'main.cpp';
 
   return (
-    <Card className="flex flex-col h-full border-border bg-card overflow-hidden">
-      {/* Editor Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30">
-        <span className="text-xs font-medium text-muted-foreground uppercase">
-          {language} Editor
-        </span>
-        <div className="flex items-center gap-2">
-          {onSave && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleSave}
-              disabled={isSaving || disabled}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save
-                </>
-              )}
-            </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={runCode}
-            disabled={isRunning || disabled}
-            className="gap-2"
-          >
-            {isRunning ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4" />
-                Run Code
-              </>
-            )}
-          </Button>
+    <div className="flex flex-col h-full bg-[#05050A] border border-red-600/20 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(236,19,19,0.05)] font-display">
+      {/* Editor Header / Tabs */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5 shrink-0">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-600 opacity-80">Editor.js</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded border border-white/10">
+              <img src={LANGUAGE_LOGOS[language]} alt={language} className="h-3.5 w-3.5 object-contain" />
+              <span className="text-[10px] font-bold text-gray-300 font-mono tracking-tight">{fileName}</span>
+            </div>
+            {/* Nav Indicators */}
+            <div className="flex gap-1 ml-4 items-center">
+              {questionStatuses.map((status, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                    idx === questionIndex ? "bg-red-600 shadow-[0_0_8px_#ec1313] scale-125" :
+                      status === 'completed' ? "bg-green-500" :
+                        status === 'attempted' ? "bg-yellow-500" : "bg-white/10"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 text-gray-500">
+          <Settings className="h-4 w-4 cursor-pointer hover:text-white transition-colors" />
+          <Maximize2 className="h-4 w-4 cursor-pointer hover:text-white transition-colors" />
         </div>
       </div>
 
-      {/* Editor */}
-      <div className="flex-1 min-h-0">
+      {/* Monaco Editor Container */}
+      <div className="flex-1 min-h-0 bg-[#05050A]">
         <Editor
           height="100%"
           language={getMonacoLanguage(language)}
@@ -280,130 +166,69 @@ export function ExamCodeEditor({
           onChange={(value) => onChange(value || '')}
           onMount={handleEditorMount}
           theme="vs-dark"
-          options={{
-            readOnly: disabled,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: true,
-            fontSize: 14,
-            lineNumbers: 'on',
-            automaticLayout: true,
-            tabSize: 4,
-            wordWrap: 'on',
-            padding: { top: 16, bottom: 16 },
-          }}
           loading={
-            <div className="flex h-full items-center justify-center bg-card">
-              <div className="text-muted-foreground">Loading editor...</div>
+            <div className="flex h-full items-center justify-center bg-black/40">
+              <div className="text-gray-600 animate-pulse font-mono text-xs uppercase tracking-widest">Initialising Terminal...</div>
             </div>
           }
         />
       </div>
 
-      {/* Results Panel */}
-      {results.length > 0 && (
-        <div className="border-t border-border bg-muted/20 p-3 max-h-64 overflow-y-auto">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-sm font-medium">Test Results:</span>
-            <span className={`text-sm font-semibold ${passedCount === totalCount ? 'text-green-500' : 'text-yellow-500'}`}>
-              {passedCount}/{totalCount} passed
-            </span>
-          </div>
-          <div className="space-y-3">
-            {results.map((result, index) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border ${result.passed
-                  ? 'bg-green-500/10 border-green-500/30'
-                  : 'bg-red-500/10 border-red-500/30'
-                  }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  {result.passed ? (
-                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
-                  )}
-                  <span className="text-sm font-medium">
-                    Test Case {index + 1} {result.passed ? '- Passed' : '- Failed'}
-                  </span>
-                  {result.runtime_ms !== undefined && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {result.runtime_ms}ms
-                    </span>
-                  )}
-                </div>
+      {/* Submission Controls (Action Bar) */}
+      <div className="p-4 border-top border-white/10 bg-black/40 flex justify-between items-center shrink-0">
+        <div className="flex gap-2">
+          <button
+            onClick={onPrevious}
+            disabled={questionIndex === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed rounded font-bold text-[10px] transition-all uppercase tracking-widest border border-white/10"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            Prev
+          </button>
+          <button
+            onClick={onNext}
+            disabled={questionIndex === totalQuestions - 1}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 disabled:cursor-not-allowed rounded font-bold text-[10px] transition-all uppercase tracking-widest border border-white/10"
+          >
+            Next
+            <ChevronRight className="h-3 w-3" />
+          </button>
 
-                {/* Show detailed output for failed tests */}
-                {!result.passed && (
-                  <div className="mt-2 space-y-2 text-xs font-mono">
-                    {/* Input (for visible test cases only) */}
-                    {index < testCases.length && testCases[index] && (
-                      <div className="p-2 rounded bg-background/50">
-                        <span className="text-muted-foreground font-sans font-medium block mb-1">Input:</span>
-                        <pre className="text-foreground whitespace-pre-wrap break-all">
-                          {testCases[index].input || '(empty)'}
-                        </pre>
-                      </div>
-                    )}
+          <div className="w-px h-8 bg-white/10 mx-2" />
 
-                    {/* Expected Output */}
-                    {result.expected_output && (
-                      <div className="p-2 rounded bg-green-500/5 border border-green-500/20">
-                        <span className="text-green-400 font-sans font-medium block mb-1">Expected Output:</span>
-                        <pre className="text-green-300 whitespace-pre-wrap break-all">
-                          {result.expected_output}
-                        </pre>
-                      </div>
-                    )}
-
-                    {/* Actual Output */}
-                    {result.actual_output !== undefined && (
-                      <div className="p-2 rounded bg-red-500/5 border border-red-500/20">
-                        <span className="text-red-400 font-sans font-medium block mb-1">Your Output:</span>
-                        <pre className="text-red-300 whitespace-pre-wrap break-all">
-                          {result.actual_output || '(no output)'}
-                        </pre>
-                      </div>
-                    )}
-
-                    {/* Error Message */}
-                    {result.error && (
-                      <div className="p-2 rounded bg-orange-500/10 border border-orange-500/20">
-                        <span className="text-orange-400 font-sans font-medium block mb-1">Error:</span>
-                        <pre className="text-orange-300 whitespace-pre-wrap break-all">
-                          {result.error}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Show success message for passed tests */}
-                {result.passed && result.actual_output && (
-                  <div className="mt-2 text-xs font-mono">
-                    <div className="p-2 rounded bg-green-500/5 border border-green-500/20">
-                      <span className="text-green-400 font-sans font-medium block mb-1">Output:</span>
-                      <pre className="text-green-300 whitespace-pre-wrap break-all">
-                        {result.actual_output}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <button
+            onClick={onRunCode}
+            disabled={isCompiling || disabled}
+            className="flex items-center gap-2 px-6 py-2 bg-white/5 hover:bg-white/10 text-white disabled:opacity-50 rounded font-bold text-[10px] transition-all uppercase tracking-widest border border-white/10"
+          >
+            {isCompiling ? (
+              <div className="h-3 w-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Play className="h-3 w-3" />
+            )}
+            Run Tests
+          </button>
         </div>
-      )}
 
-      {/* Console Output */}
-      {consoleOutput && (
-        <div className="border-t border-border bg-background p-3 max-h-24 overflow-y-auto">
-          <span className="text-xs font-medium text-muted-foreground">Console:</span>
-          <pre className="text-xs mt-1 text-foreground font-mono whitespace-pre-wrap">
-            {consoleOutput}
-          </pre>
-        </div>
-      )}
-    </Card>
+        <button
+          onClick={onFinalize}
+          disabled={!canSubmit || isSubmitting || disabled}
+          className={cn(
+            "flex items-center gap-3 px-8 py-2 rounded font-bold text-[10px] transition-all uppercase tracking-[0.15em] border border-red-600/50",
+            canSubmit
+              ? "bg-red-600 hover:bg-red-700 text-white shadow-[0_0_20px_rgba(236,19,19,0.3)]"
+              : "bg-red-950/20 text-red-600/40 opacity-50 cursor-not-allowed"
+          )}
+        >
+          {isSubmitting ? (
+            <div className="h-3 w-3 border-2 border-red-500/20 border-t-red-500 rounded-full animate-spin" />
+          ) : (
+            <Rocket className="h-3.5 w-3.5" />
+          )}
+          Finalize Submission
+        </button>
+      </div>
+    </div>
   );
 }
+

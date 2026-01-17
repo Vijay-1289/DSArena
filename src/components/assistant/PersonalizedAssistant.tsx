@@ -6,13 +6,13 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Bot, 
-  X, 
-  ChevronRight, 
-  Lightbulb, 
-  Video, 
-  Target, 
+import {
+  Bot,
+  X,
+  ChevronRight,
+  Lightbulb,
+  Video,
+  Target,
   TrendingUp,
   BookOpen,
   Flame,
@@ -44,39 +44,39 @@ export function PersonalizedAssistant() {
   const shouldHide = hiddenPaths.some(path => location.pathname.startsWith(path)) || location.pathname === '/';
 
   useEffect(() => {
+    const loadData = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+        const [recs, perf] = await Promise.all([
+          learningRecommender.getRecommendations(user.id),
+          learningRecommender.analyzePerformance(user.id)
+        ]);
+        setRecommendations(recs);
+        setStrengths(perf);
+      } catch (err) {
+        console.error('Failed to load assistant data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const generateGreeting = () => {
+      const hour = new Date().getHours();
+      const greetings = hour < 12
+        ? ['Good morning, coder!', 'Rise and code!', 'Morning brain boost time!']
+        : hour < 17
+          ? ['Keep that momentum going!', 'Afternoon coding session!', 'You\'re doing great today!']
+          : ['Evening grind mode!', 'Night owl coding!', 'Finish strong today!'];
+
+      setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
+    };
+
     if (user && !shouldHide) {
       loadData();
       generateGreeting();
     }
   }, [user, shouldHide]);
-
-  const loadData = async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const [recs, perf] = await Promise.all([
-        learningRecommender.getRecommendations(user.id),
-        learningRecommender.analyzePerformance(user.id)
-      ]);
-      setRecommendations(recs);
-      setStrengths(perf);
-    } catch (err) {
-      console.error('Failed to load assistant data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateGreeting = () => {
-    const hour = new Date().getHours();
-    const greetings = hour < 12 
-      ? ['Good morning, coder!', 'Rise and code!', 'Morning brain boost time!']
-      : hour < 17
-      ? ['Keep that momentum going!', 'Afternoon coding session!', 'You\'re doing great today!']
-      : ['Evening grind mode!', 'Night owl coding!', 'Finish strong today!'];
-    
-    setGreeting(greetings[Math.floor(Math.random() * greetings.length)]);
-  };
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -114,9 +114,9 @@ export function PersonalizedAssistant() {
         )}
       >
         <div className="relative">
-          <img 
-            src={glitchyAvatar} 
-            alt="AI Assistant" 
+          <img
+            src={glitchyAvatar}
+            alt="AI Assistant"
             className="w-10 h-10 rounded-full"
           />
           {recommendations.length > 0 && (
@@ -140,9 +140,9 @@ export function PersonalizedAssistant() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <img 
-                  src={glitchyAvatar} 
-                  alt="AI Assistant" 
+                <img
+                  src={glitchyAvatar}
+                  alt="AI Assistant"
                   className="w-10 h-10 rounded-full ring-2 ring-primary/50"
                 />
                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card" />

@@ -4,9 +4,9 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Target, 
-  TrendingUp, 
+import {
+  Target,
+  TrendingUp,
   TrendingDown,
   Award,
   Clock,
@@ -21,8 +21,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
-import { 
-  fetchSkillRatings, 
+import {
+  fetchSkillRatings,
   fetchTopicUnlocks,
   calculateInterviewReadiness,
   SkillRating,
@@ -49,26 +49,26 @@ export function SkillProfile({ className }: SkillProfileProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadSkillData = async () => {
+      if (!user?.id) return;
+
+      setLoading(true);
+      const [ratings, topicUnlocks, readinessData] = await Promise.all([
+        fetchSkillRatings(user.id),
+        fetchTopicUnlocks(user.id),
+        calculateInterviewReadiness(user.id),
+      ]);
+
+      setSkillRatings(ratings);
+      setUnlocks(topicUnlocks);
+      setReadiness(readinessData);
+      setLoading(false);
+    };
+
     if (user?.id) {
       loadSkillData();
     }
   }, [user?.id]);
-
-  const loadSkillData = async () => {
-    if (!user?.id) return;
-    
-    setLoading(true);
-    const [ratings, topicUnlocks, readinessData] = await Promise.all([
-      fetchSkillRatings(user.id),
-      fetchTopicUnlocks(user.id),
-      calculateInterviewReadiness(user.id),
-    ]);
-    
-    setSkillRatings(ratings);
-    setUnlocks(topicUnlocks);
-    setReadiness(readinessData);
-    setLoading(false);
-  };
 
   // Get rating for a topic (default to 1000 if not found)
   const getRatingForTopic = (topic: string): SkillRating | null => {
@@ -85,8 +85,8 @@ export function SkillProfile({ className }: SkillProfileProps) {
   // Calculate overall stats
   const totalProblems = skillRatings.reduce((sum, r) => sum + r.problems_solved, 0);
   const totalAttempts = skillRatings.reduce((sum, r) => sum + r.problems_attempted, 0);
-  const overallAccuracy = totalAttempts > 0 
-    ? Math.round((totalProblems / totalAttempts) * 100) 
+  const overallAccuracy = totalAttempts > 0
+    ? Math.round((totalProblems / totalAttempts) * 100)
     : 0;
   const avgRating = skillRatings.length > 0
     ? Math.round(skillRatings.reduce((sum, r) => sum + r.rating, 0) / skillRatings.length)
@@ -199,9 +199,9 @@ export function SkillProfile({ className }: SkillProfileProps) {
                   const rating = getRatingForTopic(topic);
                   const tier = rating?.tier as SkillTier || 'silver';
                   const tierInfo = getTierInfo(tier);
-                  
+
                   return (
-                    <div 
+                    <div
                       key={topic}
                       className={cn(
                         "p-3 rounded-lg border transition-colors",
@@ -221,8 +221,8 @@ export function SkillProfile({ className }: SkillProfileProps) {
                           <span className="font-medium">{topic}</span>
                         </div>
                         {rating ? (
-                          <SkillRatingBadge 
-                            rating={rating.rating} 
+                          <SkillRatingBadge
+                            rating={rating.rating}
                             tier={tier}
                             size="sm"
                           />
@@ -232,7 +232,7 @@ export function SkillProfile({ className }: SkillProfileProps) {
                           </Badge>
                         )}
                       </div>
-                      
+
                       {rating && (
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
@@ -269,7 +269,7 @@ export function SkillProfile({ className }: SkillProfileProps) {
                   const hardUnlock = unlocks.find(
                     u => u.topic === topic && u.difficulty === 'hard'
                   );
-                  
+
                   return (
                     <div key={topic} className="p-3 rounded-lg border bg-card">
                       <div className="font-medium mb-2">{topic}</div>
@@ -284,7 +284,7 @@ export function SkillProfile({ className }: SkillProfileProps) {
                           </div>
                           <span className="text-green-600 text-xs">Unlocked</span>
                         </div>
-                        
+
                         {/* Medium */}
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">
@@ -305,7 +305,7 @@ export function SkillProfile({ className }: SkillProfileProps) {
                             </span>
                           )}
                         </div>
-                        
+
                         {/* Hard */}
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2">

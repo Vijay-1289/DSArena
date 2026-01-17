@@ -1,7 +1,5 @@
 import React from 'react';
-import { Heart, Clock, AlertTriangle, Wifi } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ExamHeaderProps {
@@ -25,149 +23,71 @@ export function ExamHeader({
   canSubmit,
   timeUntilSubmit,
 }: ExamHeaderProps) {
-  const isTimeLow = timeRemaining < 30 * 60; // Less than 30 minutes
-  const isTimeCritical = timeRemaining < 10 * 60; // Less than 10 minutes
+  // Parse timeRemaining into HH:MM:SS for the digital clock
+  const hours = Math.floor(timeRemaining / 3600);
+  const minutes = Math.floor((timeRemaining % 3600) / 60);
+  const seconds = timeRemaining % 60;
 
-  const progressPercent = ((currentQuestion) / totalQuestions) * 100;
+  const pad = (num: number) => num.toString().padStart(2, '0');
 
   return (
-    <div className="bg-card border-b border-border px-4 py-3">
-      <div className="flex items-center justify-between">
-        {/* Left side - Exam info */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">DSArena Exam</span>
-            <Badge variant="secondary" className="uppercase">
-              {language}
-            </Badge>
-          </div>
-
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Question {currentQuestion + 1} of {totalQuestions}
-            </span>
-            <Progress value={progressPercent} className="w-24 h-2" />
-          </div>
+    <header className="relative flex items-center justify-between w-full h-16 px-6 bg-[#030712] border-b border-white/10 shrink-0">
+      {/* Left: Branding */}
+      <div className="flex items-center gap-4">
+        <div className="flex flex-col">
+          <h2 className="text-red-600 text-[10px] font-bold tracking-[0.3em] uppercase opacity-80 leading-tight">
+            Zen Mode Active
+          </h2>
+          <h1 className="text-lg font-bold text-white tracking-tight flex items-center gap-2 leading-tight">
+            DSArena Exam <span className="text-white/40 font-mono text-sm ml-1">#402</span>
+          </h1>
         </div>
+      </div>
 
-        {/* Center - Timer */}
-        <div className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-lg transition-colors",
-          isTimeCritical ? "bg-destructive/20 text-destructive animate-pulse" :
-            isTimeLow ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400" :
-              "bg-muted"
-        )}>
-          <Clock className="h-4 w-4" />
-          <span className={cn(
-            "font-mono text-lg font-bold",
-            isTimeCritical && "text-destructive"
-          )}>
-            {formatTime(timeRemaining)}
+      {/* Center: Large Red Digital Clock */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+        <div className="flex items-baseline gap-1 font-mono text-red-500">
+          <span className="text-3xl font-bold tracking-tighter drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]">
+            {pad(hours)}
+          </span>
+          <span className="text-xl opacity-30 animate-pulse">:</span>
+          <span className="text-3xl font-bold tracking-tighter drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]">
+            {pad(minutes)}
+          </span>
+          <span className="text-xl opacity-30 animate-pulse">:</span>
+          <span className="text-3xl font-bold tracking-tighter drop-shadow-[0_0_10px_rgba(239,68,68,0.4)]">
+            {pad(seconds)}
           </span>
         </div>
+        <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] mt-1 font-bold">Remaining Time</p>
+      </div>
 
-        {/* Right side - Hearts, Network, and Submit status */}
-        <div className="flex items-center gap-4">
-          {/* Network Status */}
-          <NetworkStatus />
-
-          {/* Submit status */}
-          {!canSubmit && (
-            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
-              <AlertTriangle className="h-4 w-4 text-yellow-500" />
-              <span>Submit in {formatTime(timeUntilSubmit)}</span>
-            </div>
-          )}
-
-          {canSubmit && (
-            <Badge variant="default" className="bg-green-600">
-              Ready to Submit
-            </Badge>
-          )}
-
-          {/* Hearts */}
-          <div className="flex items-center gap-1">
+      {/* Right: Integrity Widget */}
+      <div className="flex items-center gap-6 bg-white/5 px-6 py-2 rounded-full border border-white/10">
+        <div className="flex flex-col items-end">
+          <p className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-bold mb-0.5">Integrity</p>
+          <div className="flex gap-1.5">
             {Array.from({ length: 3 }).map((_, index) => (
               <Heart
                 key={index}
                 className={cn(
-                  "h-6 w-6 transition-all duration-300",
+                  "h-4 w-4 transition-all duration-500",
                   index < heartsRemaining
-                    ? "fill-red-500 text-red-500"
-                    : "text-muted-foreground/30"
+                    ? "fill-red-600 text-red-600 drop-shadow-[0_0_5px_rgba(220,38,38,0.6)]"
+                    : "text-white/10 fill-transparent"
                 )}
               />
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Mobile progress */}
-      <div className="sm:hidden mt-2 flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">
-          Q{currentQuestion + 1}/{totalQuestions}
-        </span>
-        <Progress value={progressPercent} className="flex-1 h-1" />
+        {/* Pulsing Recording Dot */}
+        <div className="relative flex items-center justify-center p-2 rounded-lg bg-black/40 border border-white/10 group overflow-hidden">
+          <div className="absolute inset-0 bg-red-600/5 group-hover:bg-red-600/10 transition-colors" />
+          <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shadow-[0_0_10px_#dc2626]" />
+        </div>
       </div>
-    </div>
+    </header>
   );
 }
 
-function NetworkStatus() {
-  const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
-  const [isSlow, setIsSlow] = React.useState(false);
-
-  React.useEffect(() => {
-    const updateOnlineStatus = () => {
-      setIsOffline(!navigator.onLine);
-    };
-
-    const updateConnectionStatus = () => {
-      // Check for slow connection using Network Information API if available
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const connection = (navigator as any).connection;
-      if (connection) {
-        // effectiveType: 'slow-2g', '2g', '3g', or '4g'
-        const isSlowConnection = connection.effectiveType === 'slow-2g' ||
-          connection.effectiveType === '2g'; // || connection.downlink < 1
-        setIsSlow(isSlowConnection);
-      }
-    };
-
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const connection = (navigator as any).connection;
-    if (connection) {
-      connection.addEventListener('change', updateConnectionStatus);
-      updateConnectionStatus(); // Initial check
-    }
-
-    return () => {
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
-      if (connection) {
-        connection.removeEventListener('change', updateConnectionStatus);
-      }
-    };
-  }, []);
-
-  if (isOffline || isSlow) {
-    return (
-      <div className="flex items-center justify-center p-2" title={isOffline ? "No Internet Connection" : "Slow Connection"}>
-        {/* Dinosaur Icon (Black and White) */}
-        <svg viewBox="0 0 24 24" className="w-6 h-6 fill-current text-foreground" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 10a1 1 0 0 1-1-1v-2a3 3 0 0 0-6 0h-2l-2 2H7v1h2v1h-1v1h-2v2h2v4h1v-3h2v3h1v-4h2v-4h1v-2h2v2h1v1h2v-3a1 1 0 0 1-1-1zM4 22h16a1 1 0 0 0 1-1v-1h-2v1H5v-1H3v1a1 1 0 0 0 1 1z" />
-          <path d="M4 14h2v2H4z" />
-        </svg>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-center p-2" title="Good Connection">
-      <Wifi className="w-5 h-5 text-green-500" />
-    </div>
-  );
-}

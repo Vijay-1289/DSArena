@@ -19,28 +19,9 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
   const [isLoading, setIsLoading] = useState(false);
   const [lastCodeLength, setLastCodeLength] = useState(0);
 
-  // Show Glitchy when there's an error
-  useEffect(() => {
-    if (lastError && lastError.length > 0) {
-      setMood('alert');
-      setIsVisible(true);
-      fetchHint(true);
-    }
-  }, [lastError]);
-
-  // Track code changes for curious reactions
-  useEffect(() => {
-    const diff = Math.abs(code.length - lastCodeLength);
-    if (diff > 50 && lastCodeLength > 0) {
-      setMood('curious');
-      setIsVisible(true);
-    }
-    setLastCodeLength(code.length);
-  }, [code]);
-
   const fetchHint = useCallback(async (hasError = false) => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     setMood('thinking');
 
@@ -66,6 +47,27 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
       setIsLoading(false);
     }
   }, [code, language, problemDescription, lastError, isLoading]);
+
+  // Show Glitchy when there's an error
+  useEffect(() => {
+    if (lastError && lastError.length > 0) {
+      setMood('alert');
+      setIsVisible(true);
+      fetchHint(true);
+    }
+  }, [lastError, fetchHint]);
+
+  // Track code changes for curious reactions
+  useEffect(() => {
+    const diff = Math.abs(code.length - lastCodeLength);
+    if (diff > 50 && lastCodeLength > 0) {
+      setMood('curious');
+      setIsVisible(true);
+    }
+    setLastCodeLength(code.length);
+  }, [code, lastCodeLength]);
+
+
 
   const handleGlitchyClick = () => {
     if (!isVisible) {
@@ -98,12 +100,12 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
   return (
     <div className="relative z-50">
       {/* Glitchy Avatar */}
-      <div 
+      <div
         className="relative cursor-pointer transition-all duration-300 ease-out group"
         onClick={handleGlitchyClick}
       >
         {/* Avatar Container - Full image display */}
-        <div 
+        <div
           className={cn(
             "relative w-12 h-12 rounded-full overflow-hidden transition-all duration-300",
             "border-2 border-primary/70 hover:border-primary",
@@ -113,12 +115,12 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
           )}
         >
           {/* The avatar image - no cropping */}
-          <img 
-            src={glitchyAvatar} 
-            alt="Glitchy Assistant" 
+          <img
+            src={glitchyAvatar}
+            alt="Glitchy Assistant"
             className="w-full h-full object-cover"
           />
-          
+
           {/* Overlay effects based on mood */}
           <div className={cn(
             "absolute inset-0 pointer-events-none transition-opacity duration-300",
@@ -127,14 +129,14 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
             mood === 'happy' && "bg-primary/5"
           )} />
         </div>
-        
+
         {/* Loading Spinner Overlay */}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
-        
+
         {/* Thinking bubbles when curious or thinking */}
         {(mood === 'thinking' || mood === 'curious') && !hint && (
           <div className="absolute -left-6 top-2 flex flex-col gap-1">
@@ -151,7 +153,7 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
 
         {/* Speech Bubble */}
         {isVisible && hint && (
-          <div 
+          <div
             className={cn(
               "absolute top-full right-0 mt-3 w-72 p-4 rounded-xl",
               "bg-card/95 backdrop-blur-sm border border-border/80 shadow-2xl",
@@ -160,10 +162,10 @@ export function GlitchyAssistant({ code, language, problemDescription, lastError
           >
             {/* Arrow pointing up-right */}
             <div className="absolute -top-2 right-6 w-4 h-4 bg-card/95 border-l border-t border-border/80 transform rotate-45" />
-            
+
             {/* Content */}
             <p className="text-sm text-foreground relative z-10 leading-relaxed">{hint}</p>
-            
+
             {/* Action */}
             <button
               onClick={(e) => {

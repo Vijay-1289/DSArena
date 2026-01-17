@@ -24,13 +24,18 @@ export function ProblemCard({
   isSolved,
   isAttempted,
 }: ProblemCardProps) {
-  const difficultyConfig = {
-    easy: { label: 'Easy', className: 'difficulty-easy' },
-    medium: { label: 'Medium', className: 'difficulty-medium' },
-    hard: { label: 'Hard', className: 'difficulty-hard' },
+  // Helper functions to avoid object literal syntax that breaks Tailwind parser
+  const getDifficultyLabel = () => {
+    if (difficulty === 'easy') return 'Easy';
+    if (difficulty === 'medium') return 'Medium';
+    return 'Hard';
   };
 
-  const config = difficultyConfig[difficulty];
+  const getDifficultyClassName = () => {
+    if (difficulty === 'easy') return 'difficulty-easy';
+    if (difficulty === 'medium') return 'difficulty-medium';
+    return 'difficulty-hard';
+  };
 
   // Block navigation for solved problems
   const handleClick = (e: React.MouseEvent) => {
@@ -45,8 +50,8 @@ export function ProblemCard({
       onClick={handleClick}
       className={cn(
         "group block rounded-xl border p-4 transition-all duration-200",
-        isSolved 
-          ? "border-success/30 bg-success/5 cursor-default" 
+        isSolved
+          ? "border-success/30 bg-success/5 cursor-default"
           : "border-border bg-card hover:border-primary/50 hover:bg-card/80 hover:shadow-lg"
       )}
     >
@@ -81,8 +86,8 @@ export function ProblemCard({
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Badge variant="outline" className={cn('border', config.className)}>
-            {config.label}
+          <Badge variant="outline" className={cn('border', getDifficultyClassName())}>
+            {getDifficultyLabel()}
           </Badge>
           {acceptanceRate !== undefined && (
             <span className="text-xs text-muted-foreground">

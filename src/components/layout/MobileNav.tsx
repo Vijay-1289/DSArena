@@ -23,6 +23,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import logo from '@/assets/logo.png';
 
 export function MobileNav() {
   const { user, signOut } = useAuth();
@@ -68,13 +69,13 @@ export function MobileNav() {
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[280px] bg-background">
+      <SheetContent side="right" className="w-[280px] bg-background/80 backdrop-blur-xl border-l border-white/10">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary">
-              <Code2 className="h-4 w-4 text-primary-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg shadow-lg shadow-primary/10 overflow-hidden">
+              <img src={logo} alt="" className="h-full w-full object-contain" />
             </div>
-            <span className="gradient-text font-bold">DSArena</span>
+            <span className="gradient-text font-bold text-glow">DSArena</span>
           </SheetTitle>
         </SheetHeader>
         <nav className="mt-8 flex flex-col gap-2">

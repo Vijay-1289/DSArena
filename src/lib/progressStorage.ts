@@ -42,9 +42,14 @@ function writeLocalSolved(userId: string, solved: Set<string>) {
 async function seedSolvedToBackend(userId: string, solved: Set<string>) {
   // Best-effort: insert rows; ignore duplicates.
   for (const id of solved) {
-    const payload = isValidUUID(id)
-      ? { user_id: userId, problem_id: id, attempts: 1 }
-      : { user_id: userId, problem_slug: id, attempts: 1 };
+    let payload: any;
+    if (id.startsWith('host-q-')) {
+      payload = { user_id: userId, problem_slug: id, attempts: 1 };
+    } else {
+      payload = isValidUUID(id)
+        ? { user_id: userId, problem_id: id, attempts: 1 }
+        : { user_id: userId, problem_slug: id, attempts: 1 };
+    }
 
     const { error } = await supabase.from('user_solved').insert([payload] as any);
     // 23505 = unique_violation (already exists)
@@ -119,7 +124,8 @@ export async function saveProgress(
   runtimeMs?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const isUuid = isValidUUID(problemId);
+    const isHostQuestion = problemId.startsWith('host-q-');
+    const isUuid = !isHostQuestion && isValidUUID(problemId);
     const matchColumn = isUuid ? 'problem_id' : 'problem_slug';
 
     // Check if already solved in DB
@@ -161,13 +167,19 @@ export async function saveProgress(
         return { success: false, error: updateError.message };
       }
     } else {
-      // Create new record (store in problem_id if UUID, otherwise problem_slug)
+      // Create new record
       const insertPayload: Record<string, any> = {
         user_id: userId,
         best_runtime_ms: runtimeMs,
         attempts: 1,
       };
-      insertPayload[matchColumn] = problemId;
+
+      if (isHostQuestion) {
+        insertPayload.problem_slug = problemId;
+        insertPayload.problem_id = null;
+      } else {
+        insertPayload[matchColumn] = problemId;
+      }
 
       const { error: insertError } = await supabase.from('user_solved').insert([insertPayload] as any);
 
@@ -244,3 +256,73 @@ export async function refreshProgressCache(userId: string): Promise<Set<string>>
   return fetchSolvedProblems(userId);
 }
 
+
+// Save code draft to cloud
+export async function saveDraft(
+  userId: string,
+  problemId: string,
+  code: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const isUuid = isValidUUID(problemId);
+    const payload: Record<string, any> = {
+      user_id: userId,
+      code,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (isUuid) {
+      payload.problem_id = problemId;
+    } else {
+      payload.problem_slug = problemId;
+    }
+
+    const { error } = await (supabase
+      .from('drafts')
+      .upsert(payload as any, {
+        onConflict: isUuid ? 'user_id,problem_id' : 'user_id,problem_slug'
+      }) as any);
+
+    if (error) {
+      console.error('Error saving draft:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save draft:', error);
+    return { success: false, error: 'Network error' };
+  }
+}
+
+// Load code draft from cloud
+export async function loadDraft(
+  userId: string,
+  problemId: string
+): Promise<string | null> {
+  try {
+    const isUuid = isValidUUID(problemId);
+    const query = supabase
+      .from('drafts')
+      .select('code')
+      .eq('user_id', userId);
+
+    if (isUuid) {
+      query.eq('problem_id', problemId);
+    } else {
+      query.eq('problem_slug', problemId);
+    }
+
+    const { data, error } = await query.maybeSingle();
+
+    if (error) {
+      console.error('Error loading draft:', error);
+      return null;
+    }
+
+    return data?.code || null;
+  } catch (error) {
+    console.error('Failed to load draft:', error);
+    return null;
+  }
+}

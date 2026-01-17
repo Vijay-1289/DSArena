@@ -1,5 +1,6 @@
 // Lives System - 3 lives that restore 10 minutes after loss (Supabase-backed)
 import { supabase } from '@/integrations/supabase/client';
+import { LIVES_CONFIG } from './constants';
 
 export interface LivesData {
   lives: number;
@@ -8,27 +9,27 @@ export interface LivesData {
 }
 
 const DEFAULT_LIVES: LivesData = {
-  lives: 3,
+  lives: LIVES_CONFIG.MAX_LIVES,
   lostTimes: [],
 };
 
-const TEN_MINUTES = 10 * 60 * 1000; // 10 minutes in milliseconds
+const TEN_MINUTES = LIVES_CONFIG.RESTORE_TIME_MS; // 10 minutes in milliseconds
 
 // In-memory cache to avoid excessive DB calls during the same session
 let livesCache: { [userId: string]: { data: LivesData; lastFetched: number } } = {};
-const CACHE_TTL = 5000; // 5 seconds cache
+const CACHE_TTL = LIVES_CONFIG.CACHE_TTL_MS; // 5 seconds cache
 
 // Restore lives that have been lost for more than 10 minutes
 function restoreExpiredLives(data: LivesData): LivesData {
   const now = Date.now();
-  
+
   // Filter out expired losses (older than 10 minutes)
   const activeLosses = data.lostTimes.filter(time => now - time < TEN_MINUTES);
-  
+
   // Calculate restored lives
   const restoredCount = data.lostTimes.length - activeLosses.length;
-  const newLives = Math.min(3, data.lives + restoredCount);
-  
+  const newLives = Math.min(LIVES_CONFIG.MAX_LIVES, data.lives + restoredCount);
+
   if (restoredCount > 0) {
     return {
       lives: newLives,
@@ -36,7 +37,7 @@ function restoreExpiredLives(data: LivesData): LivesData {
       userId: data.userId,
     };
   }
-  
+
   return data;
 }
 
@@ -72,7 +73,7 @@ export async function fetchLivesData(userId: string): Promise<LivesData> {
 
     // Restore expired lives
     const restoredData = restoreExpiredLives(livesData);
-    
+
     // If lives were restored, update the database
     if (restoredData.lives !== livesData.lives || restoredData.lostTimes.length !== livesData.lostTimes.length) {
       await saveLivesDataToSupabase(restoredData, userId);
@@ -93,12 +94,12 @@ export function getLocalLivesData(userId?: string): LivesData {
   if (!userId) {
     return { ...DEFAULT_LIVES };
   }
-  
+
   const cached = livesCache[userId];
   if (cached) {
     return restoreExpiredLives(cached.data);
   }
-  
+
   // Return default if no cache, the async fetch should populate it
   return { ...DEFAULT_LIVES, userId };
 }
@@ -128,17 +129,17 @@ async function saveLivesDataToSupabase(data: LivesData, userId: string): Promise
 // Lose a life - returns new lives data (async)
 export async function loseLifeAsync(userId: string): Promise<LivesData> {
   const currentData = await fetchLivesData(userId);
-  
+
   if (currentData.lives <= 0) {
     return currentData;
   }
-  
+
   const newData: LivesData = {
     lives: currentData.lives - 1,
     lostTimes: [...currentData.lostTimes, Date.now()],
     userId,
   };
-  
+
   await saveLivesDataToSupabase(newData, userId);
   return newData;
 }
@@ -150,41 +151,41 @@ export function loseLife(userId?: string): LivesData {
   }
 
   const currentData = getLocalLivesData(userId);
-  
+
   if (currentData.lives <= 0) {
     return currentData;
   }
-  
+
   const newData: LivesData = {
     lives: currentData.lives - 1,
     lostTimes: [...currentData.lostTimes, Date.now()],
     userId,
   };
-  
+
   // Update cache immediately
   livesCache[userId] = { data: newData, lastFetched: Date.now() };
-  
+
   // Save to Supabase asynchronously
   saveLivesDataToSupabase(newData, userId);
-  
+
   return newData;
 }
 
 // Get time until next life restore (in milliseconds)
 export function getTimeUntilNextRestore(userId?: string): number | null {
   const data = getLocalLivesData(userId);
-  
+
   if (data.lives >= 3 || data.lostTimes.length === 0) {
     return null;
   }
-  
+
   const now = Date.now();
-  
+
   // Find the oldest loss that hasn't been restored yet
   const sortedLosses = [...data.lostTimes].sort((a, b) => a - b);
   const oldestLoss = sortedLosses[0];
   const restoreTime = oldestLoss + TEN_MINUTES;
-  
+
   return Math.max(0, restoreTime - now);
 }
 
@@ -227,7 +228,7 @@ export function formatTimeRemaining(ms: number): string {
   const hours = Math.floor(ms / (1000 * 60 * 60));
   const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   } else if (minutes > 0) {

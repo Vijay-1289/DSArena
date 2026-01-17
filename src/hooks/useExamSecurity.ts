@@ -62,7 +62,7 @@ export function useExamSecurity({
       return true;
     } catch (error) {
       console.error('Failed to enter fullscreen:', error);
-      toast.error('Please enable fullscreen mode to continue the exam');
+      toast.error('Fullscreen Mandatory. Maximize window to enter combat.');
       return false;
     }
   }, []);
@@ -196,17 +196,17 @@ export function useExamSecurity({
   useEffect(() => {
     if (!isActive) return;
     // ... (keep short for brevity in thought, but full in file)
-    const handleCopy = (e: ClipboardEvent) => { e.preventDefault(); onViolation('copy'); toast.warning('Copying is disabled'); };
-    const handlePaste = (e: ClipboardEvent) => { e.preventDefault(); onViolation('paste'); toast.warning('Pasting is disabled'); };
-    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); toast.warning('Right-click is disabled'); };
+    const handleCopy = (e: ClipboardEvent) => { e.preventDefault(); onViolation('copy'); toast.warning('Anti-Cheat Active: External tools jammed.'); };
+    const handlePaste = (e: ClipboardEvent) => { e.preventDefault(); onViolation('paste'); toast.warning('Anti-Cheat Active: External tools jammed.'); };
+    const handleContextMenu = (e: MouseEvent) => { e.preventDefault(); toast.warning('Anti-Cheat Active: External tools jammed.'); };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey) {
-        if (['c', 'v', 'x'].includes(e.key.toLowerCase())) { e.preventDefault(); toast.warning('Shortcuts disabled'); }
-        if (e.key.toLowerCase() === 'r') { e.preventDefault(); toast.warning('Refresh disabled'); }
+        if (['c', 'v', 'x'].includes(e.key.toLowerCase())) { e.preventDefault(); toast.warning('Movement Restricted. Focus on the code, Operator.'); }
+        if (e.key.toLowerCase() === 'r') { e.preventDefault(); toast.warning('Movement Restricted. Focus on the code, Operator.'); }
       }
-      if (e.key === 'F5') { e.preventDefault(); toast.warning('Refresh disabled'); }
+      if (e.key === 'F5') { e.preventDefault(); toast.warning('Movement Restricted. Focus on the code, Operator.'); }
     };
-    const handlePopState = (e: PopStateEvent) => { e.preventDefault(); window.history.pushState(null, '', window.location.href); toast.warning('Back nav disabled'); };
+    const handlePopState = (e: PopStateEvent) => { e.preventDefault(); window.history.pushState(null, '', window.location.href); toast.warning('Movement Restricted. Focus on the code, Operator.'); };
 
     window.history.pushState(null, '', window.location.href);
 

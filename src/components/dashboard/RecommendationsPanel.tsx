@@ -15,22 +15,22 @@ export function RecommendationsPanel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadRecommendations = async () => {
+      if (!user) return;
+      try {
+        const recs = await learningRecommender.getRecommendations(user.id);
+        setRecommendations(recs);
+      } catch (err) {
+        console.error('Failed to load recommendations:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (user) {
       loadRecommendations();
     }
   }, [user]);
-
-  const loadRecommendations = async () => {
-    if (!user) return;
-    try {
-      const recs = await learningRecommender.getRecommendations(user.id);
-      setRecommendations(recs);
-    } catch (err) {
-      console.error('Failed to load recommendations:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading || recommendations.length === 0) {
     return null;

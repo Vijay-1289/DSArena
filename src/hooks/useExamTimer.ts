@@ -12,9 +12,15 @@ export function useExamTimer({ totalSeconds, onTimeUp, isActive }: UseExamTimerP
   const startTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Submit button unlocks at 1.5 hours (5400 seconds)
-  // Total exam duration is controlled by totalSeconds parameter (should be 2 hours / 7200 seconds)
-  const SUBMIT_UNLOCK_TIME = 1.5 * 60 * 60; // 5400 seconds
+  // Sync initial time remaining when totalSeconds is updated (handle dynamic loads/resumes)
+  useEffect(() => {
+    if (timeSpent === 0) {
+      setTimeRemaining(totalSeconds);
+    }
+  }, [totalSeconds]);
+
+  // Submit button unlocks at 50% of total exam duration
+  const SUBMIT_UNLOCK_TIME = totalSeconds / 2;
 
   const canSubmit = timeSpent >= SUBMIT_UNLOCK_TIME;
 

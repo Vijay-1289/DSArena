@@ -16,6 +16,7 @@ export interface ProblemData {
   outputFormat: string;
   constraints: string;
   starterCode: string;
+  starterTemplates?: Record<string, string>;
   timeLimitMs: number;
   memoryLimitMb: number;
   visibleTestCases: { input: string; expectedOutput: string }[];
@@ -41,7 +42,7 @@ const getDifficulty = (id: string): 'easy' | 'medium' | 'hard' => {
     'happy-number', 'plus-one', 'single-number', 'number-of-1-bits',
     'counting-bits', 'reverse-bits', 'missing-number', 'maximum-subarray'
   ];
-  
+
   if (hardProblems.some(p => id.includes(p))) return 'hard';
   if (easyProblems.some(p => id.includes(p))) return 'easy';
   return 'medium';

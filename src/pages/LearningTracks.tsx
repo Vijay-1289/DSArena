@@ -1,24 +1,30 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth';
 import { fetchSolvedProblems } from '@/lib/progressStorage';
-import { languageTracks, getAvailableTracks, getComingSoonTracks } from '@/lib/languageTracksData';
+import { languageTracks, getAvailableTracks, getComingSoonTracks, LanguageTrack } from '@/lib/languageTracksData';
 import { LivesDisplay } from '@/components/lives/LivesDisplay';
-import { Lock, ArrowRight, CheckCircle2, Code2 } from 'lucide-react';
+import { Lock, ArrowRight, Code2, TrendingUp, Medal, Globe, Rocket, Sparkles, Terminal } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function LearningTracks() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchSolvedProblems(user.id).then(setSolvedIds);
+      fetchSolvedProblems(user.id).then((ids) => {
+        setSolvedIds(ids);
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -26,7 +32,7 @@ export default function LearningTracks() {
   const comingSoonTracks = getComingSoonTracks();
 
   // Calculate progress for each track
-  const getTrackProgress = (track: typeof languageTracks[0]) => {
+  const getTrackProgress = (track: LanguageTrack) => {
     if (!track.problems) return { solved: 0, percent: 0 };
     const solved = track.problems.filter(p => solvedIds.has(p.id)).length;
     return {
@@ -35,123 +41,210 @@ export default function LearningTracks() {
     };
   };
 
-  const handleTrackClick = (track: typeof languageTracks[0]) => {
-    if (track.id === 'python') {
-      navigate('/python-track');
-    } else {
-      navigate(`/track/${track.slug}`);
-    }
+  const handleTrackClick = (track: LanguageTrack) => {
+    if (track.id === 'python') navigate('/python-track');
+    else navigate(`/track/${track.slug}`);
   };
 
+  // Total Mastery Calculation: Sum all available problems and intersect with user's solved IDs
+  const totalAvailableProblems = availableTracks.reduce((acc, t) => acc + t.totalProblems, 0);
+  const solvedInAvailableTracks = Array.from(solvedIds).filter(id =>
+    availableTracks.some(track => track.problems?.some(p => p.id === id))
+  ).length;
+
+  const totalMasteryPercent = totalAvailableProblems > 0
+    ? Math.round((solvedInAvailableTracks / totalAvailableProblems) * 100)
+    : 0;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-[#05050A] font-display text-white min-h-screen overflow-x-hidden relative selection:bg-primary/30">
+      {/* Star Field & Orbital Decorations */}
+      <div className="fixed inset-0 star-field pointer-events-none z-0" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="orbital-path w-[1200px] h-[1200px] -top-[400px] -left-[200px] opacity-20 animate-pulse" />
+        <div className="orbital-path w-[800px] h-[800px] top-[10%] left-[20%] opacity-10" />
+        <div className="orbital-path w-[1500px] h-[1500px] -bottom-[500px] -right-[300px] opacity-20" />
+      </div>
+
       <Navbar />
 
-      <main className="container mx-auto px-4 py-6 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Code2 className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
-            <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Learning Tracks
+      <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        {/* Header Section */}
+        <div className="flex flex-col gap-4 mb-20 items-center text-center">
+          <div className="flex items-center gap-4 mb-2">
+            <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center text-primary shadow-[0_0_20px_rgba(7,192,213,0.3)]">
+              <Code2 className="h-7 w-7" />
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white uppercase italic">
+              Pick your <span className="text-primary italic">Zone</span>
             </h1>
           </div>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base px-4">
-            Master programming languages from basics to advanced with structured learning paths.
-            Each track contains 30 carefully curated problems.
+          <p className="text-white/40 text-lg md:text-xl max-w-2xl font-light tracking-wide italic leading-relaxed">
+            Python warriors dominate data battles. JavaScript fighters rule frontend arenas. Java tacticians crush enterprise warfare. Pick wrong and you'll bleed lives on incompatible challenges. Pick right and you'll climb faster than 94% of rookies
           </p>
-          
-          {/* Lives Display */}
-          <div className="flex justify-center mt-4">
+
+          <div className="mt-6">
             <LivesDisplay showTimer />
           </div>
         </div>
 
-        {/* Available Tracks */}
-        <section className="mb-8 sm:mb-12">
-          <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-success" />
-            Available Now
-          </h2>
-          <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {availableTracks.map((track) => {
-              const { solved, percent } = getTrackProgress(track);
-              const isComplete = solved === track.totalProblems;
+        {/* The Constellation Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-y-24 gap-x-12 mb-32 items-center justify-items-center">
+          {availableTracks.map((track) => {
+            const { solved, percent } = getTrackProgress(track);
+            const isComplete = solved === track.totalProblems;
+            const strokeDasharray = 565;
+            const strokeDashoffset = strokeDasharray - (strokeDasharray * percent) / 100;
 
-              return (
-                <div 
-                  key={track.id} 
-                  onClick={() => handleTrackClick(track)}
-                  className="cursor-pointer"
-                >
-                  <Card className="h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-3xl sm:text-4xl">{track.icon}</span>
-                          <div>
-                            <CardTitle className="text-lg sm:text-xl">{track.name}</CardTitle>
-                            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                              {track.totalProblems} Problems
-                            </p>
-                          </div>
-                        </div>
-                        {isComplete && (
-                          <Badge className="bg-success/20 text-success border-success/30">
-                            Complete ✓
-                          </Badge>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {track.description}
-                      </p>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs sm:text-sm">
-                          <span className="text-muted-foreground">Progress</span>
-                          <span className="font-medium">{solved}/{track.totalProblems}</span>
-                        </div>
-                        <Progress value={percent} className="h-2" />
-                      </div>
-                      <Button variant="ghost" size="sm" className="w-full mt-4 text-primary">
-                        {solved > 0 ? 'Continue Learning' : 'Start Learning'}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
+            return (
+              <div
+                key={track.id}
+                onClick={() => handleTrackClick(track)}
+                className="group relative flex flex-col items-center cursor-pointer transition-all active:scale-95"
+              >
+                {/* Planet Node Container */}
+                <div className="relative w-56 h-56 mb-8">
+                  {/* Progress Ring SVG */}
+                  <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-[0_0_15px_rgba(7,192,213,0.2)]">
+                    <circle
+                      cx="112" cy="112" r="95"
+                      className="text-white/[0.05] fill-none stroke-current stroke-[2]"
+                    />
+                    <circle
+                      cx="112" cy="112" r="95"
+                      className="text-primary fill-none stroke-current stroke-[4] transition-all duration-1000 ease-out"
+                      strokeDasharray={strokeDasharray}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+
+                  {/* Planet Core (Orb) */}
+                  <div className={`absolute inset-6 rounded-full glass-orb flex flex-col items-center justify-center p-6 ${isComplete ? 'mastered-glow' : ''}`}>
+                    <span className="text-[10px] font-bold tracking-[0.3em] text-primary mb-2 uppercase font-mono">{track.id}</span>
+                    {track.icon.startsWith('http') ? (
+                      <img
+                        src={track.icon}
+                        alt={track.name}
+                        className="w-16 h-16 object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]"
+                      />
+                    ) : (
+                      <span className="text-5xl group-hover:scale-110 transition-transform duration-500">{track.icon}</span>
+                    )}
+                    {isComplete && <Sparkles className="absolute -top-2 -right-2 text-primary animate-pulse" />}
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
 
-        {/* Coming Soon Tracks */}
-        {comingSoonTracks.length > 0 && (
-          <section>
-            <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center gap-2">
-              <Lock className="h-5 w-5 text-muted-foreground" />
-              Coming Soon
-            </h2>
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-              {comingSoonTracks.map((track) => (
-                <Card
-                  key={track.id}
-                  className="opacity-60 cursor-not-allowed"
-                >
-                  <CardContent className="p-3 sm:p-4 text-center">
-                    <span className="text-2xl sm:text-3xl block mb-2">{track.icon}</span>
-                    <h3 className="font-semibold text-sm sm:text-base">{track.name}</h3>
-                    <Badge variant="secondary" className="mt-2 text-xs">
-                      Coming Soon
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
+                {/* Status HUD Data */}
+                <div className="text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <p className={`font-mono text-xs font-bold tracking-widest ${isComplete ? 'text-primary' : 'text-white/60'}`}>
+                      {isComplete ? 'SYSTEM MASTERED' : `${Math.round(percent)}% CONQUERED`}
+                    </p>
+                  </div>
+                  <p className="font-mono text-[9px] text-white/30 uppercase tracking-[0.2em]">
+                    {solved}/{track.totalProblems} PATTERNS MASTERED
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* HUD System Stats Dashboard */}
+        <div className="border-t border-white/5 pt-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Total Mastery Panel */}
+            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md group hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-lg tracking-tight uppercase">Total Mastery</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-end font-mono">
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest">Global Synchronization</span>
+                  <span className="text-xl text-primary font-bold">{totalMasteryPercent}%</span>
+                </div>
+                <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary shadow-[0_0_10px_rgba(7,192,213,0.5)] transition-all duration-1000"
+                    style={{ width: `${totalMasteryPercent}%` }}
+                  />
+                </div>
+              </div>
             </div>
-          </section>
-        )}
+
+            {/* Badges Panel */}
+            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md group hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="size-12 rounded-xl bg-[#7C3AED]/10 flex items-center justify-center text-[#7C3AED]">
+                  <Medal className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-lg tracking-tight uppercase">Achievements</h3>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                {totalMasteryPercent > 0 && (
+                  <div className="size-10 rounded-full bg-white/5 flex items-center justify-center text-primary border border-white/10 shadow-[0_0_15px_rgba(7,192,213,0.2)]" title="System Link Established">
+                    <Rocket className="h-5 w-5" />
+                  </div>
+                )}
+                {totalMasteryPercent >= 50 && (
+                  <div className="size-10 rounded-full bg-white/5 flex items-center justify-center text-[#7C3AED] border border-white/10 shadow-[0_0_15px_rgba(124,58,237,0.2)]" title="Elite Commander">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="size-10 rounded-full bg-white/[0.02] border border-dashed border-white/10 flex items-center justify-center text-white/10">
+                  <Terminal className="h-4 w-4" />
+                </div>
+                <div className="size-10 rounded-full bg-white/[0.02] border border-dashed border-white/10 flex items-center justify-center text-white/10">
+                  <Lock className="h-4 w-4" />
+                </div>
+              </div>
+            </div>
+
+            {/* System Status Panel */}
+            <div className="p-8 rounded-2xl bg-white/[0.02] border border-white/5 backdrop-blur-md group hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-white/40">
+                  <Globe className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-lg tracking-tight uppercase">System Logs</h3>
+              </div>
+              <div className="font-mono text-[10px] text-white/40 space-y-2 uppercase leading-relaxed tracking-wider">
+                <p className="flex justify-between border-b border-white/[0.03] pb-1">
+                  <span>Location:</span> <span className="text-white/60">Orion Sector-G9</span>
+                </p>
+                <p className="flex justify-between border-b border-white/[0.03] pb-1">
+                  <span>Signal:</span> <span className="text-emerald-500">Optimal</span>
+                </p>
+                <p className="flex justify-between border-b border-white/[0.03] pb-1">
+                  <span>Processors:</span> <span className="text-white/60">{solvedIds.size} Loaded</span>
+                </p>
+                <p className="flex justify-between">
+                  <span>Buffer:</span> <span className="text-primary animate-pulse">Ready</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* Footer Navigation Credits */}
+      <footer className="relative z-10 w-full px-10 py-12 border-t border-white/5 bg-black/40 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 font-mono">
+            © 2144 DSArena Orbital Command • encrypted protocol
+          </p>
+          <div className="flex gap-10">
+            <span className="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-white/30 font-mono">
+              <span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_12px_#10b981] animate-pulse"></span>
+              Sub-orbital Systems Hub Established
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -1,0 +1,251 @@
+﻿
+D:\DSArena\DSArena\src\components\arena\CompilerVisualizerModal.tsx
+   67:8   warning  React Hook useEffect has missing dependencies: 'handleAnalyze' and 'initialCode'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+   83:20  error    Unexpected any. Specify a different type                                                                                              @typescript-eslint/no-explicit-any
+  226:17  error    Unexpected lexical declaration in case block                                                                                          no-case-declarations
+
+D:\DSArena\DSArena\src\components\exam\ActiveExamInterface.tsx
+  23:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\components\exam\ExamCodeEditor.tsx
+  50:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  56:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\components\exam\ExamResultsScreen.tsx
+  66:6  warning  React Hook useEffect has a missing dependency: 'loadResults'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DSArena\DSArena\src\components\exam\ExamStartScreen.tsx
+   17:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   67:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   70:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   80:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:57  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   86:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\components\layout\MobileNav.tsx
+  40:6  warning  React Hook useEffect has a missing dependency: 'checkAdminRole'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DSArena\DSArena\src\components\layout\Navbar.tsx
+  54:6  warning  React Hook useEffect has a missing dependency: 'checkAdminRole'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DSArena\DSArena\src\components\leaderboard\AchievementBadge.tsx
+  13:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\problems\StoryGenerator.tsx
+  58:6  warning  React Hook useEffect has missing dependencies: 'handleGenerateStory' and 'onStoryGenerated'. Either include them or remove the dependency array. If 'onStoryGenerated' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+D:\DSArena\DSArena\src\components\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\ui\button.tsx
+  49:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\ui\form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\ui\sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\ui\sonner.tsx
+  31:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\components\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\features\admin\components\ExamAdmin.tsx
+  131:9  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+D:\DSArena\DSArena\src\features\admin\hooks\useMasterAdminLogic.ts
+  75:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\features\host\components\HostInstanceForm.tsx
+  32:85  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\features\host\components\HostQuestionDesigner.tsx
+  49:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\features\host\hooks\useHostDashboardLogic.ts
+  111:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  112:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  151:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  157:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  181:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  321:87  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  326:82  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  330:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  346:98  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  359:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\hooks\useDashboardLogic.ts
+  44:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\hooks\useExamEvaluation.ts
+  50:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\hooks\useExamSecurity.ts
+   56:27  error    Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   57:24  error    Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   58:27  error    Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   59:24  error    Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   76:31  error    Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+   77:22  error    Unexpected any. Specify a different type                                                                               @typescript-eslint/no-explicit-any
+  109:6   warning  React Hook useCallback has an unnecessary dependency: 'onViolation'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DSArena\DSArena\src\hooks\useExamTimer.ts
+  20:6  warning  React Hook useEffect has a missing dependency: 'timeSpent'. Either include it or remove the dependency array             react-hooks/exhaustive-deps
+  85:6  warning  React Hook useCallback has a missing dependency: 'SUBMIT_UNLOCK_TIME'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\DSArena\DSArena\src\hooks\useProblemExecution.ts
+  101:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  105:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\lib\auth.tsx
+  132:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\DSArena\DSArena\src\lib\bonusCodeSystem.ts
+  20:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  20:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  48:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  48:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  77:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  95:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\lib\dailyChallenges.ts
+  189:19  error  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  190:16  error  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  222:19  error  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  222:27  error  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  289:74  error  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
+  304:33  error  Do not access Object.prototype method 'hasOwnProperty' from target object  no-prototype-builtins
+
+D:\DSArena\DSArena\src\lib\examUtils.ts
+  151:7  error  'selected' is never reassigned. Use 'const' instead  prefer-const
+
+D:\DSArena\DSArena\src\lib\gemini.ts
+  4:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\lib\learningRecommender.ts
+  115:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  115:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\lib\progressStorage.ts
+   49:78  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   80:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   80:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  165:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  172:99  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  256:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  270:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  272:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\lib\skillRatingSystem.ts
+  252:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  252:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  290:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  290:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  313:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  313:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  357:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  357:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  383:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  383:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  397:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  397:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  407:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\lib\templateGenerator.ts
+  149:87  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  152:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\Exam.tsx
+  110:65   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  124:80   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  126:50   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  127:46   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  131:62   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  131:132  error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  215:6    warning  React Hook useCallback has a missing dependency: 'resumeExam'. Either include it or remove the dependency array      react-hooks/exhaustive-deps
+  218:24   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  225:38   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  232:37   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  235:24   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  242:37   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  244:64   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  248:32   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  254:54   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  254:83   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  258:53   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  258:81   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  272:31   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  274:26   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  290:54   warning  React Hook useEffect has a missing dependency: 'checkEligibility'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  292:77   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  302:55   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  308:52   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  308:81   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  312:51   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+  312:79   error    Unexpected any. Specify a different type                                                                             @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\LanguageTrackPage.tsx
+  43:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\Leaderboard.tsx
+   64:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:96  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\PracticeProblems.tsx
+  126:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  129:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  148:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  148:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  154:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  154:70  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\PracticeProblemsIndex.tsx
+   27:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   48:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   51:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   64:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   80:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   99:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\Problems.tsx
+  46:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\PythonTrack.tsx
+  48:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\pages\admin\ExamAdmin_Backup.tsx
+   77:82  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   78:65  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  108:82  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  116:97  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:76  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  202:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  203:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\DSArena\DSArena\src\types\index.ts
+  19:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 159 problems (140 errors, 19 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

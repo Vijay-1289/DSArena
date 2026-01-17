@@ -14,24 +14,34 @@ interface LanguageSelectorProps {
 }
 
 const SUPPORTED_LANGUAGES = [
-  { value: 'python', label: 'Python', icon: '🐍' },
-  { value: 'javascript', label: 'JavaScript', icon: '🟨' },
-  { value: 'java', label: 'Java', icon: '☕' },
-  { value: 'cpp', label: 'C++', icon: '⚡' },
-  { value: 'go', label: 'Go', icon: '🐹' },
-  { value: 'rust', label: 'Rust', icon: '🦀' },
-  { value: 'csharp', label: 'C#', icon: '💜' },
-  { value: 'ruby', label: 'Ruby', icon: '💎' },
-  { value: 'swift', label: 'Swift', icon: '🦅' },
-  { value: 'kotlin', label: 'Kotlin', icon: '🎯' },
+  {
+    value: 'python',
+    label: 'Python',
+    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg'
+  },
+  {
+    value: 'javascript',
+    label: 'JavaScript',
+    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg'
+  },
+  {
+    value: 'java',
+    label: 'Java',
+    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg'
+  },
+  {
+    value: 'cpp',
+    label: 'C++',
+    icon: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/cplusplus/cplusplus-original.svg'
+  }
 ];
 
 export function LanguageSelector({ value, onChange, disabled = false, restrictedLanguage }: LanguageSelectorProps) {
   // If restricted to a specific language (track problems), only show that language
-  const availableLanguages = restrictedLanguage 
+  const availableLanguages = restrictedLanguage
     ? SUPPORTED_LANGUAGES.filter(l => l.value === restrictedLanguage)
     : SUPPORTED_LANGUAGES;
-  
+
   const selectedLang = SUPPORTED_LANGUAGES.find(l => l.value === value);
 
   // If restricted, disable the selector
@@ -43,7 +53,11 @@ export function LanguageSelector({ value, onChange, disabled = false, restricted
         <SelectValue>
           {selectedLang && (
             <span className="flex items-center gap-2">
-              <span>{selectedLang.icon}</span>
+              {selectedLang.icon.startsWith('http') ? (
+                <img src={selectedLang.icon} alt={selectedLang.label} className="w-4 h-4 object-contain" />
+              ) : (
+                <span>{selectedLang.icon}</span>
+              )}
               <span>{selectedLang.label}</span>
             </span>
           )}
@@ -53,7 +67,11 @@ export function LanguageSelector({ value, onChange, disabled = false, restricted
         {availableLanguages.map((lang) => (
           <SelectItem key={lang.value} value={lang.value}>
             <span className="flex items-center gap-2">
-              <span>{lang.icon}</span>
+              {lang.icon.startsWith('http') ? (
+                <img src={lang.icon} alt={lang.label} className="w-4 h-4 object-contain" />
+              ) : (
+                <span>{lang.icon}</span>
+              )}
               <span>{lang.label}</span>
             </span>
           </SelectItem>

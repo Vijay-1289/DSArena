@@ -1,5 +1,5 @@
 // Practice Problems Page with Problem-Solving Interface
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { CodeEditor } from '@/components/editor/CodeEditor';
@@ -15,11 +15,12 @@ import {
   ResizablePanelGroup,
 } from '@/components/ui/resizable';
 import { useAuth } from '@/lib/auth';
-import { 
-  practiceProblemsData, 
+import {
+  practiceProblemsData,
   getPracticeProblemBySlug,
-  PracticeProblemData 
+  PracticeProblemData
 } from '@/lib/practiceProblemsData';
+import { ProblemData } from '@/lib/problemsData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -40,10 +41,25 @@ import {
   ChevronLeft,
   ChevronRight,
   Code,
+  ArrowLeftFromLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import { LanguageSelector } from '@/components/editor/LanguageSelector';
+import { useLivesManager } from '@/hooks/useLivesManager';
+import { useProblemExecution } from '@/hooks/useProblemExecution';
+import { LivesDisplay } from '@/components/lives/LivesDisplay';
+import { GlitchyAssistant } from '@/components/editor/GlitchyAssistant';
+import { LIVES_CONFIG } from '@/lib/constants';
+import { generateStarterCode } from '@/lib/templateGenerator';
+
+interface ExecutionResult {
+  passed: boolean;
+  error?: string;
+  output?: string;
+  expectedOutput?: string;
+  input?: string;
+}
 
 export default function PracticeProblemsPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -54,16 +70,14 @@ export default function PracticeProblemsPage() {
   const [solved, setSolved] = useState(false);
 
   const [code, setCode] = useState('');
-  const [running, setRunning] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [results, setResults] = useState<any[] | null>(null);
-  const [consoleOutput, setConsoleOutput] = useState('');
   const [showDescription, setShowDescription] = useState(true);
-  const [lastError, setLastError] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('python');
 
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const { lives, noLives, penalize, timeUntilRestore, formattedTimeRemaining } = useLivesManager(user?.id);
+  const { running, submitting, results, consoleOutput, lastError, execute, setResults, setLastError } = useProblemExecution();
 
   // Helper functions for UI elements
   const getDifficultyColor = (difficulty: string) => {
@@ -78,69 +92,15 @@ export default function PracticeProblemsPage() {
   // Language-specific starter code templates
   const getStarterCodeForLanguage = useCallback((lang: string): string => {
     if (!problem) return '';
-    
-    const templates: Record<string, string> = {
-      python: problem.starterCode,
-      javascript: `// JavaScript version of ${problem.title}
-// Write your solution here
-function solution() {
-    // Your code here
-}
-
-// Read input from stdin
-const readline = require('readline');
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-let lines = [];
-rl.on('line', (line) => {
-    lines.push(line);
-});
-
-rl.on('close', () => {
-    // Parse input and call solution
-    console.log(solution());
-});
-`,
-      java: `// Java version of ${problem.title}
-import java.util.*;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        // Read input
-        
-        // Your solution here
-        
-        // Print output
-    }
-}
-`,
-      cpp: `// C++ version of ${problem.title}
-#include <iostream>
-#include <vector>
-#include <string>
-using namespace std;
-
-int main() {
-    // Read input
-    
-    // Your solution here
-    
-    // Print output
-    
-    return 0;
-}
-`,
-    };
-    return templates[lang] || templates.python;
+    // Ensure problem satisfies ProblemData interface for the generator
+    const problemWithDefaults: ProblemData = {
+      ...problem,
+      timeLimitMs: problem.timeLimitMs || 2000,
+      memoryLimitMb: problem.memoryLimitMb || 256,
+      category: 'Practice'
+    } as ProblemData;
+    return generateStarterCode(problemWithDefaults, lang);
   }, [problem]);
-
-  useEffect(() => {
-    loadProblem();
-  }, [slug]);
 
   useEffect(() => {
     // Initialize code when problem and language are loaded
@@ -155,19 +115,60 @@ int main() {
     }
   }, [problem, selectedLanguage, user?.id, getStarterCodeForLanguage]);
 
-  const loadProblem = async () => {
+  const loadProblem = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
       if (slug) {
-        // Load specific problem by slug
-        const foundProblem = getPracticeProblemBySlug(slug);
-        if (foundProblem) {
-          setProblem(foundProblem);
-          setCurrentProblemIndex(practiceProblemsData.findIndex(p => p.id === foundProblem.id));
+        if (slug.startsWith('custom-')) {
+          const questionId = slug.replace('custom-', '');
+          const { data: q, error: qError } = await supabase
+            .from('exam_questions' as any)
+            .select('*')
+            .eq('id', questionId)
+            .maybeSingle() as any;
+
+          if (qError || !q) {
+            console.error('Custom problem fetch error:', qError);
+            setError('Tactical unit not found in registry.');
+            return;
+          }
+
+          const transformedProblem: PracticeProblemData = {
+            id: q.id,
+            slug: `custom-${q.id}`,
+            title: q.title,
+            difficulty: 'medium',
+            description: q.description,
+            inputFormat: q.input_format || "def solution(n: int) -> int:",
+            outputFormat: q.output_format || "Return the calculated result.",
+            constraints: q.constraints || "Standard neural execution constraints.",
+            starterCode: q.starter_code || "",
+            visibleTestCases: Array.isArray(q.test_cases)
+              ? q.test_cases.filter((tc: any) => !tc.hidden).map((tc: any) => ({
+                input: String(tc.input),
+                expectedOutput: String(tc.output)
+              }))
+              : [],
+            hiddenTestCases: Array.isArray(q.test_cases)
+              ? q.test_cases.filter((tc: any) => tc.hidden).map((tc: any) => ({
+                input: String(tc.input),
+                expectedOutput: String(tc.output)
+              }))
+              : []
+          };
+          setProblem(transformedProblem);
+          setCurrentProblemIndex(-1);
         } else {
-          setError('Problem not found');
+          // Load specific problem by slug
+          const foundProblem = getPracticeProblemBySlug(slug);
+          if (foundProblem) {
+            setProblem(foundProblem);
+            setCurrentProblemIndex(practiceProblemsData.findIndex(p => p.id === foundProblem.id));
+          } else {
+            setError('Problem not found');
+          }
         }
       } else {
         // Load first problem by default
@@ -180,7 +181,12 @@ int main() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [slug]);
+
+  useEffect(() => {
+    loadProblem();
+  }, [loadProblem]);
+
 
   const triggerConfetti = () => {
     const duration = 3000;
@@ -211,7 +217,7 @@ int main() {
 
   const saveDraft = useCallback(() => {
     if (!problem) return;
-    
+
     const draftKey = `practice-problem-draft-${user?.id || 'anonymous'}-${problem.id}-${selectedLanguage}`;
     localStorage.setItem(draftKey, code);
     toast.success('Draft saved');
@@ -220,76 +226,84 @@ int main() {
   const runCode = async (submitAll = false) => {
     if (!problem) return;
 
-    if (submitAll) {
-      setSubmitting(true);
-    } else {
-      setRunning(true);
-    }
-    setResults(null);
-    setConsoleOutput('');
-    setLastError(null);
+    const testCasesToRun = submitAll
+      ? [...problem.visibleTestCases, ...problem.hiddenTestCases]
+      : problem.visibleTestCases;
 
-    try {
-      // Prepare test cases based on submission type
-      const testCasesToRun = submitAll 
-        ? [...problem.visibleTestCases, ...problem.hiddenTestCases]
-        : problem.visibleTestCases;
+    const formattedTestCases = testCasesToRun.map(tc => ({
+      input: tc.input,
+      expectedOutput: tc.expectedOutput,
+    }));
 
-      const formattedTestCases = testCasesToRun.map(tc => ({
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-      }));
+    await execute({
+      code,
+      language: selectedLanguage,
+      testCases: formattedTestCases,
+      currentLives: lives,
+      maxLives: LIVES_CONFIG.MAX_LIVES,
+      userId: user?.id,
+      problemId: problem.id,
+      onSuccess: (executionResults) => {
+        const passedCount = executionResults.filter(r => r.passed).length;
+        const totalCount = executionResults.length;
 
-      const { data, error } = await supabase.functions.invoke('execute-code', {
-        body: { code, testCases: formattedTestCases, language: selectedLanguage }
-      });
+        if (submitAll) {
+          if (passedCount === totalCount) {
+            setSolved(true);
+            triggerConfetti();
 
-      if (error) {
-        throw new Error(error.message || 'Failed to execute code');
-      }
+            // Persist to Supabase to prevent XP farming
+            const recordProgress = async () => {
+              try {
+                const { saveProgress } = await import('@/lib/progressStorage');
+                // Use host-q- prefix for custom questions to identify them in the database
+                const finalId = problem.id.startsWith('custom-') ? problem.id.replace('custom-', 'host-q-') : (slug?.startsWith('custom-') ? `host-q-${problem.id}` : problem.id);
+                await saveProgress(user.id, finalId, problem.difficulty);
+              } catch (err) {
+                console.error('Failed to record practice progress:', err);
+              }
+            };
+            recordProgress();
 
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setResults(data.results);
-      setConsoleOutput(data.consoleOutput || '');
-      
-      // Check for any errors in results
-      const errorResult = data.results.find((r: any) => r.error);
-      if (errorResult) {
-        setLastError(errorResult.error);
-      }
-
-      const passedCount = data.results.filter((r: any) => r.passed).length;
-      const totalCount = data.results.length;
-
-      if (submitAll) {
-        if (passedCount === totalCount) {
-          setSolved(true);
-          triggerConfetti();
-          toast.success(`🎉 Congratulations! All ${totalCount} test cases passed!`);
+            toast.success('FLAWLESS VICTORY. Rank adjusted.');
+          } else {
+            toast.error(`Combat Result: ${passedCount} Hits, ${totalCount - passedCount} Misses.`);
+          }
         } else {
-          toast.error(`${passedCount}/${totalCount} test cases passed`);
-        }
-      } else {
-        if (passedCount === totalCount) {
-          toast.success(`All visible test cases passed!`);
-        } else {
-          toast.info(`${passedCount}/${totalCount} visible test cases passed`);
+          if (passedCount === totalCount) {
+            toast.success('FLAWLESS VICTORY. Rank adjusted.');
+          } else {
+            toast.info(`Combat Result: ${passedCount} Hits, ${totalCount - passedCount} Misses.`);
+          }
         }
       }
-    } catch (error: unknown) {
-      console.error('Execution error:', error);
-      const message = error instanceof Error ? error.message : 'An error occurred';
-      toast.error(message);
-      setConsoleOutput(message);
-      setLastError(message);
-    } finally {
-      setRunning(false);
-      setSubmitting(false);
-    }
+    }, submitAll);
   };
+
+  const lastPenalizedRef = useRef<number>(0);
+
+  // Focus violation penalties (visibility change and blur)
+  useEffect(() => {
+    if (noLives || !user) return;
+
+    const handleFocusLoss = () => {
+      const now = Date.now();
+      if (now - lastPenalizedRef.current < 2000) return;
+
+      if (document.hidden || !document.hasFocus()) {
+        penalize();
+        lastPenalizedRef.current = now;
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleFocusLoss);
+    window.addEventListener('blur', handleFocusLoss);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleFocusLoss);
+      window.removeEventListener('blur', handleFocusLoss);
+    };
+  }, [noLives, user, penalize]);
 
   // Convert test cases to format expected by TestCasePanel
   const testCases = problem?.visibleTestCases.map((tc, index) => ({
@@ -312,6 +326,33 @@ int main() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (noLives) {
+    return (
+      <div className="flex h-screen flex-col bg-[#030712]">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-8">
+            <h2 className="text-2xl font-bold text-rose-500 mb-4 uppercase tracking-[0.2em]">YOU BROKE FOCUS. YOU PAY THE PRICE.</h2>
+            <p className="text-slate-400 mb-6 font-mono text-sm leading-relaxed">
+              Breach detected. You broke the Arena's #1 rule. While you're locked out, warriors just took your score. This is what happens when you treat combat like a casual game
+            </p>
+            {formattedTimeRemaining && (
+              <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-6 mb-6">
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2 font-bold">PENALTY COUNTDOWN</p>
+                <p className="text-4xl font-mono font-bold text-cyan-500 drop-shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                  {formattedTimeRemaining}
+                </p>
+              </div>
+            )}
+            <Button onClick={() => navigate('/learning-tracks')} variant="outline" className="border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 uppercase tracking-widest font-bold text-xs">
+              RETURN TO BASE
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -339,7 +380,7 @@ int main() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
-      <Navbar />
+      {/* <Navbar /> */}
 
       {/* Header */}
       <div className="bg-card border-b border-border px-4 py-3">
@@ -349,8 +390,10 @@ int main() {
               <Code className="h-5 w-5 text-primary" />
               <h1 className="text-lg font-semibold">Practice Problems</h1>
             </div>
-            <span className="text-sm text-muted-foreground">
-              Problem {currentProblemIndex + 1} of {practiceProblemsData.length}
+            <span className="text-sm text-muted-foreground italic">
+              {currentProblemIndex === -1
+                ? "External Protocol Unit"
+                : `Problem ${currentProblemIndex + 1} of ${practiceProblemsData.length}`}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -358,7 +401,7 @@ int main() {
               variant="outline"
               size="sm"
               onClick={() => navigateToProblem(currentProblemIndex - 1)}
-              disabled={currentProblemIndex === 0}
+              disabled={currentProblemIndex <= 0}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -366,16 +409,16 @@ int main() {
               variant="outline"
               size="sm"
               onClick={() => navigateToProblem(currentProblemIndex + 1)}
-              disabled={currentProblemIndex === practiceProblemsData.length - 1}
+              disabled={currentProblemIndex === -1 || currentProblemIndex === practiceProblemsData.length - 1}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/practice-problems')}
+              onClick={() => navigate('/')}
             >
-              All Problems
+              Home
             </Button>
           </div>
         </div>
@@ -409,10 +452,10 @@ int main() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => navigate('/')}
+                    onClick={() => navigate('/practice-problems')}
                   >
-                    <Home className="mr-2 h-4 w-4" />
-                    <span className="hidden sm:inline">Home</span>
+                    <ArrowLeftFromLine className="mr-2 h-4 w-4" />
+                    {/* <span className="hidden sm:inline">Home</span> */}
                   </Button>
                 </div>
               </div>
@@ -540,6 +583,16 @@ int main() {
                       onChange={setCode}
                       language={selectedLanguage}
                     />
+
+                    {/* Glitchy Assistant */}
+                    <div className="absolute bottom-12 right-6 z-30">
+                      <GlitchyAssistant
+                        code={code}
+                        language={selectedLanguage}
+                        problemDescription={problem.description}
+                        lastError={lastError}
+                      />
+                    </div>
                   </div>
 
                   {/* Editor Footer */}
@@ -609,6 +662,16 @@ int main() {
             </ResizablePanelGroup>
           </ResizablePanel>
         </ResizablePanelGroup>
+      </div>
+
+      {/* Footer Navigation / Lives Display */}
+      <div className="h-8 bg-[#030712] border-t border-slate-800/50 px-4 flex items-center justify-between text-[10px] text-slate-600 font-bold tracking-widest uppercase shrink-0 z-10">
+        <div className="flex items-center gap-4">
+          <span className="hover:text-cyan-500 cursor-pointer transition-colors" onClick={() => navigate('/practice-problems')}>Practice</span>
+          <span className="text-slate-800">/</span>
+          <span className="text-slate-400 italic">{problem.title}</span>
+        </div>
+        <LivesDisplay />
       </div>
     </div>
   );

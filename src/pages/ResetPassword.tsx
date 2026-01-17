@@ -26,7 +26,7 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
-  
+
   const { updatePassword, session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,7 +48,7 @@ export default function ResetPassword() {
         });
 
         if (error) {
-          toast.error('Invalid or expired reset link. Please request a new one.');
+          toast.error('Signal Lost. That uplink has decayed. Request a fresh frequency.');
           navigate('/auth');
           return;
         }
@@ -65,7 +65,7 @@ export default function ResetPassword() {
     if (!isInitializing && !session) {
       // Give some time for auth to initialize
       const timeout = setTimeout(() => {
-        toast.error('Invalid or expired reset link. Please request a new one.');
+        toast.error('Signal Lost. That uplink has decayed. Request a fresh frequency.');
         navigate('/auth');
       }, 3000);
       return () => clearTimeout(timeout);
@@ -92,9 +92,9 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
 
     try {
@@ -103,7 +103,7 @@ export default function ResetPassword() {
         toast.error(error.message);
       } else {
         setSuccess(true);
-        toast.success('Password updated successfully!');
+        toast.success('Security Protocols Upgraded. Account fortified.');
       }
     } finally {
       setLoading(false);
@@ -114,7 +114,7 @@ export default function ResetPassword() {
     return (
       <div className="flex min-h-screen flex-col bg-background">
         <div className="absolute inset-0 bg-gradient-radial opacity-30" />
-        
+
         <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-12">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
@@ -165,7 +165,7 @@ export default function ResetPassword() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <div className="absolute inset-0 bg-gradient-radial opacity-30" />
-      
+
       <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-12">
         <Link
           to="/auth"

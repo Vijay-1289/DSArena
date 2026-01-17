@@ -90,38 +90,22 @@ export function selectRandomQuestions(
   let problems = getProblemsByLanguage(language);
 
   // Filter by topic if specified and not "All"
-  console.log('[selectRandomQuestions] ========== FILTERING START ==========');
-  console.log('[selectRandomQuestions] Language:', language);
-  console.log('[selectRandomQuestions] Topic parameter:', topic);
-  console.log('[selectRandomQuestions] Initial problems count:', problems.length);
-
   if (topic && topic !== "All") {
     // For Python, we filter the examQuestionsData
     if (language === 'python') {
       const normalizedTopic = topic.trim().toLowerCase();
-      console.log(`[selectRandomQuestions] 🔍 FILTERING for topic: "${normalizedTopic}"`);
-      console.log(`[selectRandomQuestions] First 5 problem categories:`, problems.slice(0, 5).map(p => p.category));
 
       const allProblems = problems;
       problems = problems.filter(p => p.category.trim().toLowerCase() === normalizedTopic);
 
-      console.log(`[selectRandomQuestions] ✅ FILTERED: Found ${problems.length} questions for topic "${normalizedTopic}" out of ${allProblems.length} total.`);
-
       // DEBUG: Print categories if 0 found
       if (problems.length === 0) {
-        console.error('[selectRandomQuestions] ❌ NO QUESTIONS FOUND! Available categories:',
-          Array.from(new Set(allProblems.map(p => p.category)))
-        );
-      } else {
-        console.log('[selectRandomQuestions] ✓ Filtered question categories:', problems.map(p => p.category));
+        // No questions found
       }
     }
     // For other languages, we might not have categories yet, or they might be different
     // Assuming for now this feature is mainly for Python track
-  } else {
-    console.log('[selectRandomQuestions] ⚠️ NO FILTERING - Topic is:', topic);
   }
-  console.log('[selectRandomQuestions] ========== FILTERING END ==========');
 
   if (problems.length < count) {
     // If not enough questions in the topic, return all available ones (or throw error)
@@ -144,7 +128,6 @@ export function selectRandomQuestions(
       const selectedHard = shuffleArray(hard)[0];
 
       const selected = [selectedEasy, selectedMedium, selectedHard];
-      console.log('[selectRandomQuestions] ✅ Selected 1 Easy, 1 Medium, 1 Hard');
 
       return selected.map((problem) => ({
         id: problem.id,
@@ -239,19 +222,20 @@ export const QUESTION_WEIGHTS = [0.30, 0.30, 0.40]; // Easy: 30%, Intermediate: 
 // Calculate weighted score for exam
 // Calculate weighted score for exam
 export function calculateWeightedScore(
-  answers: { testsTotal: number; testsPassed: number; questionIndex: number }[]
+  answers: { testsTotal: number; testsPassed: number; questionIndex: number }[],
+  customWeights?: number[]
 ): { score: number; maxScore: number; percentage: number; questionScores: number[] } {
-  const questionScores: number[] = [0, 0, 0]; // Initialize with 0s for 3 questions
+  const numQuestions = customWeights ? customWeights.length : Math.max(3, ...answers.map(a => a.questionIndex + 1));
+  const weights = customWeights ||
+    (numQuestions === 3 ? QUESTION_WEIGHTS : new Array(numQuestions).fill(1 / numQuestions));
+
+  const questionScores: number[] = new Array(numQuestions).fill(0);
   let totalWeightedScore = 0;
 
   answers.forEach((answer) => {
-    // Ensure index is within bounds (0-2)
-    if (answer.questionIndex >= 0 && answer.questionIndex < 3) {
-      const weight = QUESTION_WEIGHTS[answer.questionIndex];
+    if (answer.questionIndex >= 0 && answer.questionIndex < numQuestions) {
+      const weight = weights[answer.questionIndex];
 
-      // Calculate proportional score for this question: (tests passed / total tests) * weight * 100
-      // e.g. Q1 (30pts): 5/5 tests -> 1.0 * 30 = 30pts
-      // e.g. Q3 (40pts): 2/5 tests -> 0.4 * 40 = 16pts
       const proportionalScore = answer.testsTotal > 0
         ? (answer.testsPassed / answer.testsTotal) * weight * 100
         : 0;
@@ -261,13 +245,11 @@ export function calculateWeightedScore(
     }
   });
 
-  // Max score is always 100%
   const maxScore = 100;
-  // Round to 1 decimal place for cleaner display
   const percentage = Math.round(totalWeightedScore * 10) / 10;
 
   return {
-    score: percentage, // Score matches percentage
+    score: percentage,
     maxScore,
     percentage,
     questionScores

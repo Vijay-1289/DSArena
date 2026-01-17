@@ -12,6 +12,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  resendVerification: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
+
       // Initialize caches if user is already logged in
       if (session?.user) {
         setTimeout(() => {
@@ -89,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear caches before signing out
     clearLivesCache();
     clearProgressCache();
-    
+
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -110,8 +111,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const resendVerification = async (email: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    });
+    return { error };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, resetPassword, updatePassword, resendVerification }}>
       {children}
     </AuthContext.Provider>
   );

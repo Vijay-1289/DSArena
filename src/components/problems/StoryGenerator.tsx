@@ -60,7 +60,7 @@ export function StoryGenerator({ problem, onStoryGenerated, className }: StoryGe
   const handleGenerateStory = async () => {
     setIsGenerating(true);
     setError(null);
-    
+
     try {
       const result: StoryResult = await aiStoryGenerator.generateStory({
         problemTitle: problem.title,
@@ -75,10 +75,9 @@ export function StoryGenerator({ problem, onStoryGenerated, className }: StoryGe
         onStoryGenerated?.(result.story);
       } else {
         // Use fallback story when AI fails
-        console.log('Using fallback story due to:', result.error);
         const fallback = generateFallbackStory(problem);
         setStory(fallback);
-        setError(result.error?.includes('402') || result.error?.includes('credits') 
+        setError(result.error?.includes('402') || result.error?.includes('credits')
           ? 'AI story generation temporarily unavailable. Showing a brief overview instead.'
           : null);
         onStoryGenerated?.(fallback);

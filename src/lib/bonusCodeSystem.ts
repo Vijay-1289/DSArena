@@ -40,7 +40,7 @@ export async function checkBonusEligibility(userId: string): Promise<boolean> {
 // Record a fast solve
 export async function recordFastSolve(userId: string, solveTimeSeconds: number): Promise<FastSolveStatus> {
   const isFastSolve = solveTimeSeconds <= FAST_SOLVE_THRESHOLD_SECONDS;
-  
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('consecutive_fast_solves, last_fast_solve_at')
@@ -78,7 +78,7 @@ export async function recordFastSolve(userId: string, solveTimeSeconds: number):
     .eq('id', userId);
 
   const qualifiesForBonus = consecutiveSolves >= CONSECUTIVE_REQUIRED;
-  
+
   return {
     consecutiveFastSolves: consecutiveSolves,
     lastFastSolveAt: new Date(),
@@ -100,154 +100,189 @@ export async function resetFastSolveStreak(userId: string): Promise<void> {
 export function getBonusCode(language: string, problemType?: string): string {
   const bonusCodes: Record<string, string> = {
     python: `# 🎁 BONUS CODE! Here's a head start for being fast!
-# You've solved 3 problems quickly in a row!
+import sys
 
-def solution(data):
-    """
-    Helpful utilities included:
-    - Input is already parsed for you
-    - Common patterns pre-setup
-    """
-    # Parse your input
-    lines = data.strip().split('\\n')
-    
-    # Your solution logic here
-    result = None
-    
-    return result
+# region Input Helpers
+# Read all input at once and tokenize by any whitespace
+tokens = sys.stdin.read().split()
+idx = 0
 
-# Main execution
+def read_next():
+    """Get the next token from input (handles spaces, tabs, newlines)"""
+    global idx
+    if idx < len(tokens):
+        val = tokens[idx]
+        idx += 1
+        return val
+    return None
+
+def read_int():
+    """Read next token as integer"""
+    val = read_next()
+    return int(val) if val is not None else None
+
+def read_float():
+    """Read next token as float"""
+    val = read_next()
+    return float(val) if val is not None else None
+# endregion
+
+# ========== YOUR SOLUTION BELOW ==========
+
+def solution():
+    # Example: Read two integers
+    # a = read_int()
+    # b = read_int()
+    # return a + b
+    
+    # YOUR LOGIC HERE
+    return None
+
+# Run and print result
 if __name__ == "__main__":
-    import sys
-    data = sys.stdin.read()
-    print(solution(data))
+    result = solution()
+    if result is not None:
+        print(result)
 `,
     javascript: `// 🎁 BONUS CODE! Here's a head start for being fast!
-// You've solved 3 problems quickly in a row!
+const fs = require('fs');
 
-const readline = require('readline');
+// #region Input Helpers
+// Read all input at once and tokenize by any whitespace
+const tokens = fs.readFileSync(0, 'utf-8').trim().split(/\\s+/);
+let idx = 0;
 
-function solution(lines) {
-    // Helpful utilities included:
-    // - Input lines are already split for you
-    // - Parse numbers: lines[0].split(' ').map(Number)
-    
-    // Your solution logic here
-    let result = null;
-    
-    return result;
+function readNext() {
+    // Get the next token from input (handles spaces, tabs, newlines)
+    return idx < tokens.length ? tokens[idx++] : null;
 }
 
-// Main execution
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
+function readInt() {
+    // Read next token as integer
+    const val = readNext();
+    return val !== null ? parseInt(val, 10) : null;
+}
 
-let lines = [];
-rl.on('line', (line) => lines.push(line));
-rl.on('close', () => console.log(solution(lines)));
+function readFloat() {
+    // Read next token as float
+    const val = readNext();
+    return val !== null ? parseFloat(val) : null;
+}
+// #endregion
+
+// ========== YOUR SOLUTION BELOW ==========
+
+function solution() {
+    // Example: Read two integers
+    // const a = readInt();
+    // const b = readInt();
+    // return a + b;
+    
+    // YOUR LOGIC HERE
+    return null;
+}
+
+// Run and print result
+const result = solution();
+if (result !== null && result !== undefined) {
+    console.log(result);
+}
 `,
     java: `// 🎁 BONUS CODE! Here's a head start for being fast!
-// You've solved 3 problems quickly in a row!
-
 import java.util.*;
 import java.io.*;
 
-public class Main {
-    // Helpful utilities included
-    static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-    static PrintWriter out = new PrintWriter(System.out);
+public class Solution {
+    static Scanner scanner = new Scanner(System.in);
     
-    static int[] readIntArray() throws IOException {
-        return Arrays.stream(br.readLine().split(" "))
-                     .mapToInt(Integer::parseInt)
-                     .toArray();
-    }
+    // Scanner.next() and nextInt() are already whitespace-agnostic!
+    // They automatically skip spaces, tabs, and newlines.
     
-    public static void main(String[] args) throws IOException {
-        // Parse input
-        // int n = Integer.parseInt(br.readLine());
-        // int[] arr = readIntArray();
+    public static void main(String[] args) {
+        // #region Input Helpers
+        // Example: Read two integers
+        // int a = scanner.nextInt();
+        // int b = scanner.nextInt();
+        // System.out.println(a + b);
         
-        // Your solution here
+        // ========== YOUR SOLUTION BELOW ==========
         
-        out.flush();
+        // YOUR LOGIC HERE
+        // #endregion
+        
     }
 }
 `,
     cpp: `// 🎁 BONUS CODE! Here's a head start for being fast!
-// You've solved 3 problems quickly in a row!
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
 
-#include <bits/stdc++.h>
 using namespace std;
 
-// Fast I/O
-#define FAST_IO ios::sync_with_stdio(false); cin.tie(nullptr);
-
-// Helpful macros
-#define FOR(i, a, b) for(int i = (a); i < (b); i++)
-#define ALL(x) (x).begin(), (x).end()
-
 int main() {
-    FAST_IO
+    // #region Input Helpers
+    // Fast I/O (optional but recommended)
+    ios_base::sync_with_stdio(false);
+    cin.tie(nullptr);
     
-    // Parse input
-    // int n; cin >> n;
-    // vector<int> arr(n);
-    // for(int& x : arr) cin >> x;
+    // C++ cin >> is already whitespace-agnostic by default!
+    // It automatically skips spaces, tabs, and newlines.
     
-    // Your solution here
+    // Example: Read two integers
+    // int a, b;
+    // cin >> a >> b;
+    // cout << a + b << endl;
+    
+    // ========== YOUR SOLUTION BELOW ==========
+    
+    // YOUR LOGIC HERE
+    // #endregion
     
     return 0;
 }
 `,
     go: `// 🎁 BONUS CODE! Here's a head start for being fast!
-// You've solved 3 problems quickly in a row!
-
 package main
 
 import (
-    "bufio"
     "fmt"
     "os"
 )
 
-var reader = bufio.NewReader(os.Stdin)
-var writer = bufio.NewWriter(os.Stdout)
-
-func readInt() int {
-    var n int
-    fmt.Fscan(reader, &n)
-    return n
-}
-
 func main() {
-    defer writer.Flush()
+    // #region Input Helpers
+    // Standard fmt.Scan is whitespace-agnostic (skips newlines/spaces)
     
-    // Parse input
-    // n := readInt()
+    // Example: Read two integers
+    // var a, b int
+    // fmt.Scan(&a, &b)
+    // fmt.Println(a + b)
     
-    // Your solution here
+    // YOUR LOGIC HERE
+    // #endregion
     
 }
 `,
     rust: `// 🎁 BONUS CODE! Here's a head start for being fast!
-// You've solved 3 problems quickly in a row!
-
-use std::io::{self, BufRead, Write};
+use std::io::{self, Read};
 
 fn main() {
-    let stdin = io::stdin();
-    let stdout = io::stdout();
-    let mut out = io::BufWriter::new(stdout.lock());
+    // #region Input Helpers
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer).unwrap();
     
-    let mut lines = stdin.lock().lines();
+    // Split by any whitespace for agnostic reading
+    let mut tokens = buffer.split_whitespace();
     
-    // Parse input
-    // let n: i32 = lines.next().unwrap().unwrap().parse().unwrap();
+    // Example: Read two integers
+    // let a: i32 = tokens.next().unwrap().parse().unwrap();
+    // let b: i32 = tokens.next().unwrap().parse().unwrap();
+    // println!("{}", a + b);
     
-    // Your solution here
+    // YOUR LOGIC HERE
+    // #endregion
     
 }
 `,
