@@ -1,1 +1,6 @@
-/* /index.html 200
+# 1. Primary SEO Redirects (Domain-specific)
+https://dsarena.netlify.app/* https://www.dsarena.in/:splat  301!
+http://dsarena.netlify.app/* https://www.dsarena.in/:splat  301!
+
+# 2. SPA Routing (Catch-all)
+/* /index.html  200
