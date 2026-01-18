@@ -1,1 +1,6 @@
+# 1. SEO Redirects - Must be at the very top
+https://dsarena.netlify.app/* https://www.dsarena.in/:splat 301!
+http://dsarena.netlify.app/* https://www.dsarena.in/:splat 301!
+
+# 2. SPA Rule - Must be at the very bottom
 /* /index.html 200
